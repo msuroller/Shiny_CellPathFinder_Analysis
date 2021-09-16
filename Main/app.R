@@ -83,37 +83,6 @@ ui <- dashboardPage(
                             actionButton(inputId = "action", label = "Submit")
                         )
                     ),
-                    # fluidRow(
-                    #     box(
-                    #         width = 12,
-                    #         dataTableOutput(outputId = "Cell_Stat")
-                    #     )
-                    # ),
-                    # fluidRow(
-                    #     box(
-                    #         textOutput(outputId = "date"),
-                    #         textOutput(outputId = "cleandate"),
-                    #         textOutput(outputId = "control")
-                    #     )
-                    # ),
-                    # fluidRow(
-                    #     box(
-                    #         width = 12,
-                    #         dataTableOutput(outputId = "fms")
-                    #     )
-                    # ),
-                    # fluidRow(
-                    #     box(
-                    #         width = 12,
-                    #         dataTableOutput(outputId = "con_norm")
-                    #     )
-                    # ),
-                    # fluidRow(
-                    #     box(
-                    #         width = 12,
-                    #         dataTableOutput(outputId = "sum_stat")
-                    #     )
-                    # )
             ),
             tabItem(tabName = "graph_tab",
                     tabBox(
@@ -154,47 +123,15 @@ server <- function(input, output) {
         con <- isolate(input$con)
         bg <- isolate(input$background)
         Plate <- isolate(input$plate)
-        Cell_Stat <- rename(Cell_Stat, ID = GraphSeriesNo)
-        
-        #####Displays what the user entered as a control.
-        #output$control <- renderText(con)
         
         #If the channel box is checked then rename that column. <- WORKING
-        
-        if (input$brightfield == T){
-            Cell_Stat <- rename(Cell_Stat,
-                                cell_count = isolate(input$cc_header))
-        }
-        
-        if (input$b == T){
-            Cell_Stat <- rename(Cell_Stat,
-                                b_avg = isolate(input$b_header))
-        }
-        if (input$g == T){
-            Cell_Stat <- rename(Cell_Stat,
-                                g_avg = isolate(input$g_header))
-        }
-        if (input$r == T){
-            Cell_Stat <- rename(Cell_Stat,
-                                r_avg = isolate(input$r_header))
-        }
-        if (input$fr == T){
-            Cell_Stat <- rename(Cell_Stat,
-                                fr_avg = isolate(input$fr_header))
-        }
-        
-        ##### Second Table Output (Cell_Stat)
-        # output$Cell_Stat <- DT::renderDataTable(
-        #     DT::datatable(
-        #         Cell_Stat, extensions = 'FixedColumns', options = list(
-        #             pageLength = 3,
-        #             bSort = FALSE,
-        #             scrollX = TRUE,
-        #             fixedColumns = TRUE
-        #             
-        #         )
-        #     )
-        # )
+        Cell_Stat <- rename(Cell_Stat, ID = GraphSeriesNo,
+                            cell_count = ifelse(input$brightfield == T, isolate(input$cc_header), ""),
+                            b_avg = ifelse(input$b == T, isolate(input$b_header), ""),
+                            g_avg = ifelse(input$g == T, isolate(input$g_header), ""),
+                            r_avg = ifelse(input$r == T, isolate(input$r_header), ""),
+                            fr_avg = ifelse(input$fr == T, isolate(input$fr_header), "")
+                            )
         
         #This section uses regular expressions to mine the image date to automate file names later on in the program. <- WORKING
         date <- str_extract(Cell_Stat$DateTime[1], "[0-9]{4}.[0-9]{2}.[0-9]{2}")%>%
@@ -202,10 +139,6 @@ server <- function(input, output) {
         #This one is specifically for labeling graphs and making them look nicer.
         cleandate <- date%>%
             str_replace_all("_", "/")
-        
-        # output$date <- renderText(date)
-        # output$cleandate <- renderText(cleandate)
-        
         
         #fms=filter missing spheroids. This excludes data from any well below a certain cell count threshold. <- WORKING
         #Normally this value sits at around 1000 but may need to be tweaked. 
@@ -217,61 +150,15 @@ server <- function(input, output) {
         }
         else(fms <- Cell_Stat)
         
-        ####### Third Table Output (fms)
-        # output$fms<- DT::renderDataTable(
-        #     DT::datatable(
-        #         fms, extensions = 'FixedColumns', options = list(
-        #             pageLength = 3,
-        #             bSort = FALSE,
-        #             scrollX = TRUE,
-        #             fixedColumns = TRUE
-        #             
-        #         )
-        #     )
-        # )
-        
-        
         #This adds the mean DMSO value for each channel, then makes a new column dividing all the other treatments by the mean DMSO value,
         #then finds the standard deviations of those values.
-        con_norm <- fms  #con_norm = control normalized  <- WORKING
-        
-        if (input$brightfield == T){ # <- WORKING
-            con_norm <- mutate(con_norm, cell_count_con = (cell_count/mean(cell_count[Compound == con])))
-        }
-        
-        if(input$b == T){
-            con_norm <- mutate(con_norm, b_con = b_avg/mean(b_avg[Compound == con]))
-        }
-        
-        if(input$g == T){
-            con_norm <- mutate(con_norm, g_con = g_avg/mean(g_avg[Compound == con]))
-        }
-        
-        if(input$r == T){
-            con_norm <- mutate(con_norm,
-                               r_sub = r_avg - mean(r_avg[Compound == bg]),
-                               r_sub_norm =100* r_sub/mean(r_sub[Compound == con]),
-                               r_con = r_avg/mean(r_avg[Compound == con]))
-        }
-        
-        if(input$fr == T){
-            con_norm <- mutate(con_norm, fr_con = fr_avg/mean(fr_avg[Compound == con]))
-        }
-        else(con_norm <- con_norm)
-        
-        
-        ######### Fourth Table Output (con_norm)
-        # output$con_norm <- DT::renderDataTable(
-        #     DT::datatable(
-        #         con_norm, extensions = 'FixedColumns', options = list(
-        #             pageLength = 3,
-        #             bSort = FALSE,
-        #             scrollX = TRUE,
-        #             fixedColumns = TRUE
-        #             
-        #         )
-        #     )
-        # )
+        con_norm <- fms%>% #con_norm = control normalized  <- WORKING
+                    mutate(cell_count_con = ifelse(input$brightfield == T, (cell_count/mean(cell_count[Compound == con])), 0),
+                           b_con = ifelse(input$b == T, b_avg/mean(b_avg[Compound == con]), 0),
+                           g_con = ifelse(input$g == T, g_avg/mean(g_avg[Compound == con]), 0),
+                           r_con = ifelse(input$r == T, r_avg/mean(r_avg[Compound == con]), 0),
+                           fr_con = ifelse(input$fr == T, fr_avg/mean(fr_avg[Compound == con]), 0)
+                           )
         
         #This makes a dataframe with means and stdevs of each treatment and control normalized treatments. <- WORKING
         sum_stat <- con_norm%>%  #sum_stat = Summary Statistics
@@ -303,21 +190,7 @@ server <- function(input, output) {
                 fr_stdev_con = ifelse(input$fr == T, sd(fr_con), 0)
             )
         
-        
-        ######### Fifth Table Output (con_norm)
-        #output$sum_stat <- DT::renderDataTable(
-        #     DT::datatable(
-        #         sum_stat, extensions = 'FixedColumns', options = list(
-        #             pageLength = 3,
-        #             bSort = FALSE,
-        #             scrollX = TRUE,
-        #             fixedColumns = TRUE
-        #             
-        #         )
-        #     )
-        # )
-        
-        
+        #Graphing
         style <- theme(plot.title = element_text(face="bold", hjust = 0.5), axis.title.y = element_text(face="bold"), axis.text.x = element_text(size=9, face="bold", angle=30, hjust = 1, vjust = 1), plot.margin = margin(10,10,10,50, "pt"))
         if(input$brightfield == T){
             cell_count <- ggplot(data=sum_stat)+
