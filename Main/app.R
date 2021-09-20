@@ -89,34 +89,42 @@ ui <- dashboardPage(
                     ),
             ),
             tabItem(tabName = "graph_tab",
+                fluidPage(
                     fluidRow(
                         tabBox(
-                            title = strong("Bar Graphs"), id = "tabset1", height = "250px",
+                            title = strong("Bar Graphs"), id = "tabset1",
                             tabPanel("Cell Count", plotOutput(outputId = "cc_hist")),
                             tabPanel("Blue", plotOutput(outputId = "b_hist")),
                             tabPanel("Green", plotOutput(outputId = "g_hist")),
-                            tabPanel("Red", plotOutput(outputId = "r_hist")),
-                            tabPanel("Far Red", plotOutput(outputId = "fr_hist"))
+                            tabPanel("Red", 
+                                     h5(downloadButton("download1", "Download"), align = "right"), 
+                                     plotOutput(outputId = "r_hist")),
+                            tabPanel("Far Red", plotOutput(outputId = "fr_hist"))#,
+                            #tabPanel(downloadButton("download1", "Download"))
                         ),
                         tabBox(
-                            title = strong("Control Normalized Bar Graphs"), id = "tabset2", height = "250px",
+                            title = strong("Control Normalized Bar Graphs"), id = "tabset2",
                             tabPanel("Cell Count", plotOutput(outputId = "cc_hist_con")),
                             tabPanel("Blue", plotOutput(outputId = "b_hist_con")),
                             tabPanel("Green", plotOutput(outputId = "g_hist_con")),
                             tabPanel("Red", plotOutput(outputId = "r_hist_con")),
-                            tabPanel("Far Red", plotOutput(outputId = "fr_hist_con"))
+                            tabPanel("Far Red", plotOutput(outputId = "fr_hist_con")),
+                            tabPanel(downloadButton("download2", "Download"))
                         )
+                        
                     ),
                     fluidRow(
                         tabBox(
-                            title = strong("Boring Graphs"), id = "tabset3", height = "250px",
+                            title = strong("Boring Graphs"), id = "tabset3",
                             tabPanel("Cell Count", plotOutput(outputId = "cc_hist_3")),
                             tabPanel("Blue", plotOutput(outputId = "b_hist_3")),
                             tabPanel("Green", plotOutput(outputId = "g_hist_3")),
                             tabPanel("Red", plotOutput(outputId = "r_hist_3")),
-                            tabPanel("Far Red", plotOutput(outputId = "fr_hist_3"))
+                            tabPanel("Far Red", plotOutput(outputId = "fr_hist_3")),
+                            tabPanel(downloadButton("download3", "Download"))
                         )
                     )
+                )
             )
         )
     )
@@ -141,6 +149,7 @@ server <- function(input, output) {
     })
     
     #Once the 2nd submit button is clicked then do all that below.
+    
     observeEvent(input$action,{
         Cell_Stat <- read.csv(input$cell_stat$datapath, header = T)
         con <- isolate(input$con)
@@ -258,15 +267,17 @@ server <- function(input, output) {
             filter(Compound != con)
         
         #####Start of "boring graphs" section.
+        #Need to automate the dose column
         sum_stat$Dose = c(1e-9,0,30,55,80,105,130,155,180,195,390,0)*1e-6
         max_dose <- max(sum_stat$Dose)
         filter_sum_stat <- sum_stat%>%
             filter(Dose != 0)
 
+        #Need to ask for user input for these ones.
         lowerxlim = -5
         upperxlim = -3
 #       logp3 = log10(newc)
-        lx = seq(.000001,.001, by = 0.00001)
+        lx = seq(.000001,.001, by = 0.00001) #List x
 
         # output$table2 <- DT::renderDataTable(
         #     DT::datatable(
@@ -298,12 +309,12 @@ server <- function(input, output) {
         
         
         if(input$brightfield == T){
-            cell_count <- ggplot(data=sum_stat)+
+            cell_count_graph <- ggplot(data=sum_stat)+
                 geom_col(mapping=aes(x=factor(ID), y=cell_count_mean), fill="grey")+
                 geom_errorbar(aes(x = factor(ID), ymin = cell_count_mean - cell_count_stdev,  ymax = cell_count_mean + cell_count_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate, " ",Plate, " Cell Count"), x=NULL, y = "Cell Count")
-            output$cc_hist <- renderPlot({cell_count})
+            output$cc_hist <- renderPlot({cell_count_graph})
             if(con != ""){
                 cell_count_con_graph <- ggplot(data = no_con)+
                     geom_col(mapping = aes(x=factor(ID), y = cell_count_mean_con), fill = "grey")+
@@ -338,12 +349,12 @@ server <- function(input, output) {
         }
         
         if(input$b == T){
-            blue <- ggplot(data=sum_stat)+
+            blue_graph <- ggplot(data=sum_stat)+
                 geom_col(mapping=aes(x=factor(ID), y=b_mean), fill="blue")+
                 geom_errorbar(aes(x = factor(ID), ymin = b_mean - b_stdev,  ymax = b_mean + b_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate," Blue Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
-            output$b_hist <- renderPlot({blue})
+            output$b_hist <- renderPlot({blue_graph})
             if(con != ""){
                 b_con_graph <- ggplot(data = no_con)+
                     geom_col(mapping = aes(x=factor(ID), y = b_mean_con), fill = "blue")+
@@ -378,12 +389,12 @@ server <- function(input, output) {
         }
         
         if(input$g == T){
-            green <- ggplot(data=sum_stat)+
+            green_graph <- ggplot(data=sum_stat)+
                 geom_col(mapping=aes(x=factor(ID), y=g_mean), fill="green")+
                 geom_errorbar(aes(x = factor(ID), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate," Green Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
-            output$g_hist <- renderPlot({green})
+            output$g_hist <- renderPlot({green_graph})
             if(con != ""){
                 g_con_graph <- ggplot(data = no_con)+
                     geom_col(mapping = aes(x=factor(ID), y = g_mean_con), fill = "green")+
@@ -418,12 +429,21 @@ server <- function(input, output) {
         }
         
         if(input$r == T){
-            red <- ggplot(data=sum_stat)+
+            red_graph <- ggplot(data=sum_stat)+
                 geom_col(mapping=aes(x=factor(ID), y=r_mean), fill="red")+
                 geom_errorbar(aes(x = factor(ID), ymin = r_mean - r_stdev,  ymax = r_mean + r_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate," Red Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
-            output$r_hist <- renderPlot({red})
+            output$r_hist <- renderPlot({red_graph})
+            #Download button for the graph
+            output$download1 <- downloadHandler(
+                filename = function() {
+                    paste0(date,"_", Plate,"_Red_Graph.svg")
+                },
+                content = function(file) {
+                    ggsave(file, plot = red_graph, width = 8, height = 5, device = svg)
+                }
+            )
             if(con != ""){
                 r_con_graph <- ggplot(data = no_con)+
                     geom_col(mapping = aes(x=factor(ID), y = r_mean_con), fill = "red")+
@@ -458,12 +478,12 @@ server <- function(input, output) {
         }
         
         if(input$fr == T){
-            far_red <- ggplot(data=sum_stat)+
+            far_red_graph <- ggplot(data=sum_stat)+
                 geom_col(mapping=aes(x=factor(ID), y=fr_mean), fill="purple")+
                 geom_errorbar(aes(x = factor(ID), ymin = fr_mean - fr_stdev,  ymax = fr_mean + fr_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate," Far Red Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
-            output$fr_hist <- renderPlot({far_red})
+            output$fr_hist <- renderPlot({far_red_graph})
             if(con != ""){
                 fr_con_graph <- ggplot(data = no_con)+
                     geom_col(mapping = aes(x=factor(ID), y = fr_mean_con), fill = "purple")+
@@ -496,6 +516,44 @@ server <- function(input, output) {
                 }
             }
         }
+        
+            
+            #####Experimenting with zip files
+        
+    # graph_list <- list(red_graph, blue_graph)
+    # 
+    # 
+    #     output$download1 <- downloadHandler(
+    #         filename = function() {
+    #             paste0("Extract.zip")
+    #         },
+    #         content = function(file) {
+    #             owd <- setwd(tempdir())
+    #             on.exit(setwd(owd))
+    #             files <- NULL;
+    #             for (i in 1:length(graph_list)){
+    #                 fileName <- paste("graph_0",i,".png",sep = "")
+    #                 ggsave(file, plot = graph_list[[i]], width = 8, height = 5, device = "png")
+    #                 files <- c(fileName, files)
+    #                 #<- c(ggsave(file, plot = graph_list[[i]], width = 8, height = 5, device = "png"), files)
+    #                 #c(paste("output_file/", graph_list[[i]], sep = ""), files)
+    #             }
+    #             system2("zip", args=(paste(file,files,sep=" ")))
+    #         }
+    #         
+            # content = function(file){
+            #     #go to a temp dir to avoid permission issues
+            #     
+            #     #loop through the sheets
+            #     for (i in 1:input$sheet){
+            #         #write each sheet to a csv file, save the name
+            #         fileName <- paste(input$text,"_0",i,".csv",sep = "")
+            #         write.table(data()$wb[i],fileName,sep = ';', row.names = F, col.names = T)
+            #         files <- c(fileName,files)
+            #     }
+            #     #create the zip file
+            #     zip(file,files)
+            # }
         
     })
 }

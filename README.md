@@ -8,7 +8,6 @@ To Do List:
   - Test with a different file
   - Add background sub calculations
   - Add background sub graphs tabBox
-  - Add more scientific graphs
   - Make a button to download the graphs and the end data file.
   - Figure out how to change starting values like in Computational Physics
   - Figure out how to compute significance and display it on the graphs
