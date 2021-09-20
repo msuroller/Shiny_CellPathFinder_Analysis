@@ -3,13 +3,11 @@ library(shinydashboard)
 library(tidyverse)
 library(DT)
 
-?sidebarMenu
-
 ui <- dashboardPage(
     dashboardHeader(title = "GraphMaster 9000"),
     dashboardSidebar(
         sidebarMenu(
-            menuItem("The Boring Tab", tabName = "input_tab", icon = icon("dashboard")),
+            menuItem("Home", tabName = "input_tab", icon = icon("dashboard")),
             menuItem("Pretty Graphs", tabName = "graph_tab", icon = icon("th"))
         )
     ),
@@ -81,19 +79,44 @@ ui <- dashboardPage(
                                          label = "Any well with a cell count below this number will not be counted. Used to filter missing spheroids",
                                          value = 1000),
                             actionButton(inputId = "action", label = "Submit")
-                        )
+                        ),
+                        #This is to look at the table "no_con".
+                        # fluidRow(
+                        #     box(
+                        #         dataTableOutput(outputId = "table2")
+                        #     )
+                        # )
                     ),
             ),
             tabItem(tabName = "graph_tab",
-                    tabBox(
-                        title = strong("Bar Graphs"), id = "tabset1", height = "250px",
-                        tabPanel("Cell Count", plotOutput(outputId = "cc_hist")),
-                        tabPanel("Blue", plotOutput(outputId = "b_hist")),
-                        tabPanel("Green", plotOutput(outputId = "g_hist")),
-                        tabPanel("Red", plotOutput(outputId = "r_hist")),
-                        tabPanel("Far Red", plotOutput(outputId = "fr_hist"))
+                    fluidRow(
+                        tabBox(
+                            title = strong("Bar Graphs"), id = "tabset1", height = "250px",
+                            tabPanel("Cell Count", plotOutput(outputId = "cc_hist")),
+                            tabPanel("Blue", plotOutput(outputId = "b_hist")),
+                            tabPanel("Green", plotOutput(outputId = "g_hist")),
+                            tabPanel("Red", plotOutput(outputId = "r_hist")),
+                            tabPanel("Far Red", plotOutput(outputId = "fr_hist"))
+                        ),
+                        tabBox(
+                            title = strong("Control Normalized Bar Graphs"), id = "tabset2", height = "250px",
+                            tabPanel("Cell Count", plotOutput(outputId = "cc_hist_con")),
+                            tabPanel("Blue", plotOutput(outputId = "b_hist_con")),
+                            tabPanel("Green", plotOutput(outputId = "g_hist_con")),
+                            tabPanel("Red", plotOutput(outputId = "r_hist_con")),
+                            tabPanel("Far Red", plotOutput(outputId = "fr_hist_con"))
+                        )
+                    ),
+                    fluidRow(
+                        tabBox(
+                            title = strong("Boring Graphs"), id = "tabset3", height = "250px",
+                            tabPanel("Cell Count", plotOutput(outputId = "cc_hist_3")),
+                            tabPanel("Blue", plotOutput(outputId = "b_hist_3")),
+                            tabPanel("Green", plotOutput(outputId = "g_hist_3")),
+                            tabPanel("Red", plotOutput(outputId = "r_hist_3")),
+                            tabPanel("Far Red", plotOutput(outputId = "fr_hist_3"))
+                        )
                     )
-                    
             )
         )
     )
@@ -126,11 +149,11 @@ server <- function(input, output) {
         
         #If the channel box is checked then rename that column. <- WORKING
         Cell_Stat <- rename(Cell_Stat, ID = GraphSeriesNo,
-                            cell_count = ifelse(input$brightfield == T, isolate(input$cc_header), ""),
-                            b_avg = ifelse(input$b == T, isolate(input$b_header), ""),
-                            g_avg = ifelse(input$g == T, isolate(input$g_header), ""),
-                            r_avg = ifelse(input$r == T, isolate(input$r_header), ""),
-                            fr_avg = ifelse(input$fr == T, isolate(input$fr_header), "")
+                            cell_count = if(input$brightfield == T) isolate(input$cc_header),
+                            b_avg = if(input$b == T) isolate(input$b_header),
+                            g_avg = if(input$g == T) isolate(input$g_header),
+                            r_avg = if(input$r == T) isolate(input$r_header),
+                            fr_avg = if(input$fr == T) isolate(input$fr_header)
                             )
         
         #This section uses regular expressions to mine the image date to automate file names later on in the program. <- WORKING
@@ -152,13 +175,45 @@ server <- function(input, output) {
         
         #This adds the mean DMSO value for each channel, then makes a new column dividing all the other treatments by the mean DMSO value,
         #then finds the standard deviations of those values.
-        con_norm <- fms%>% #con_norm = control normalized  <- WORKING
-                    mutate(cell_count_con = ifelse(input$brightfield == T, (cell_count/mean(cell_count[Compound == con])), 0),
-                           b_con = ifelse(input$b == T, b_avg/mean(b_avg[Compound == con]), 0),
-                           g_con = ifelse(input$g == T, g_avg/mean(g_avg[Compound == con]), 0),
-                           r_con = ifelse(input$r == T, r_avg/mean(r_avg[Compound == con]), 0),
-                           fr_con = ifelse(input$fr == T, fr_avg/mean(fr_avg[Compound == con]), 0)
-                           )
+        con_norm <- fms #con_norm = control normalized  <- WORKING
+
+        if (input$brightfield == T){ # <- WORKING
+            con_norm <- mutate(con_norm, 
+                               cell_count_sub = cell_count - mean(cell_count[Compound == bg]),
+                               cell_count_sub_norm =100* cell_count_sub/mean(cell_count_sub[Compound == con]),
+                               cell_count_con = (cell_count/mean(cell_count[Compound == con])))
+        }
+        
+        if(input$b == T){
+            con_norm <- mutate(con_norm, 
+                               b_sub = b_avg - mean(b_avg[Compound == bg]),
+                               b_sub_norm =100* b_sub/mean(b_sub[Compound == con]),
+                               b_con = b_avg/mean(b_avg[Compound == con]))
+        }
+        
+        if(input$g == T){
+            con_norm <- mutate(con_norm, 
+                               g_sub = g_avg - mean(g_avg[Compound == bg]),
+                               g_sub_norm =100* g_sub/mean(g_sub[Compound == con]),
+                               g_con = g_avg/mean(g_avg[Compound == con]))
+        }
+        
+        if(input$r == T){
+            con_norm <- mutate(con_norm,
+                               r_sub = r_avg - mean(r_avg[Compound == bg]),
+                               r_sub_norm =100* r_sub/mean(r_sub[Compound == con]),
+                               r_con = r_avg/mean(r_avg[Compound == con]))
+        }
+        
+        if(input$fr == T){
+            con_norm <- mutate(con_norm, 
+                               fr_sub = fr_avg - mean(fr_avg[Compound == bg]),
+                               fr_sub_norm =100* fr_sub/mean(fr_sub[Compound == con]),
+                               fr_con = fr_avg/mean(fr_avg[Compound == con]))
+        }
+        else(con_norm <- con_norm)
+        
+        
         
         #This makes a dataframe with means and stdevs of each treatment and control normalized treatments. <- WORKING
         sum_stat <- con_norm%>%  #sum_stat = Summary Statistics
@@ -168,30 +223,80 @@ server <- function(input, output) {
                 cell_count_stdev = ifelse(input$brightfield == T, sd(cell_count, na.rm = TRUE), 0),
                 cell_count_mean_con = ifelse(input$brightfield == T, mean(cell_count_con), 0),
                 cell_count_stdev_con = ifelse(input$brightfield == T, sd(cell_count_con), 0),
+                cell_count_mean_sub = ifelse(input$brightfield == T, mean(cell_count_sub_norm), 0), 
+                cell_count_stdev_sub = ifelse(input$brightfield == T, sd(cell_count_sub_norm), 0),
                 #Then on to Blue
                 b_mean = ifelse(input$b == T, mean(b_avg, na.rm = TRUE), 0),
                 b_stdev = ifelse(input$b == T, sd(b_avg, na.rm = TRUE), 0),
                 b_mean_con = ifelse(input$b == T, mean(b_con), 0),
                 b_stdev_con = ifelse(input$b == T, sd(b_con), 0),
+                b_mean_sub = ifelse(input$b == T, mean(b_sub_norm), 0), 
+                b_stdev_sub = ifelse(input$b == T, sd(b_sub_norm), 0),
                 #Now it's Green's turn
                 g_mean = ifelse(input$g == T, mean(g_avg, na.rm=TRUE), 0),
                 g_stdev = ifelse(input$g == T, sd(g_avg, na.rm=TRUE), 0),
                 g_mean_con = ifelse(input$g == T, mean(g_con), 0),
                 g_stdev_con = ifelse(input$g == T, sd(g_con), 0),
+                g_mean_sub = ifelse(input$g == T, mean(g_sub_norm), 0), 
+                g_stdev_sub = ifelse(input$g == T, sd(g_sub_norm), 0),
                 #And Red
                 r_mean = ifelse(input$r == T, mean(r_avg, na.rm=TRUE), 0),
                 r_stdev = ifelse(input$r == T, sd(r_avg, na.rm=TRUE), 0),
                 r_mean_con = ifelse(input$r == T, mean(r_con), 0),
                 r_stdev_con = ifelse(input$r == T, sd(r_con), 0),
+                r_mean_sub = ifelse(input$r == T, mean(r_sub_norm), 0), 
+                r_stdev_sub = ifelse(input$r == T, sd(r_sub_norm), 0),
                 #Finally Far Red
                 fr_mean = ifelse(input$fr == T, mean(fr_avg, na.rm=TRUE), 0),
                 fr_stdev = ifelse(input$fr == T, sd(fr_avg, na.rm=TRUE), 0),
                 fr_mean_con = ifelse(input$fr == T, mean(fr_con), 0),
-                fr_stdev_con = ifelse(input$fr == T, sd(fr_con), 0)
+                fr_stdev_con = ifelse(input$fr == T, sd(fr_con), 0),
+                fr_mean_sub = ifelse(input$fr == T, mean(fr_sub_norm), 0), 
+                fr_stdev_sub = ifelse(input$fr == T, sd(fr_sub_norm), 0)
             )
+        no_con <- sum_stat%>% #A dataframe without the control treatment
+            filter(Compound != con)
         
-        #Graphing
-        style <- theme(plot.title = element_text(face="bold", hjust = 0.5), axis.title.y = element_text(face="bold"), axis.text.x = element_text(size=9, face="bold", angle=30, hjust = 1, vjust = 1), plot.margin = margin(10,10,10,50, "pt"))
+        #####Start of "boring graphs" section.
+        sum_stat$Dose = c(1e-9,0,30,55,80,105,130,155,180,195,390,0)*1e-6
+        max_dose <- max(sum_stat$Dose)
+        filter_sum_stat <- sum_stat%>%
+            filter(Dose != 0)
+
+        lowerxlim = -5
+        upperxlim = -3
+#       logp3 = log10(newc)
+        lx = seq(.000001,.001, by = 0.00001)
+
+        # output$table2 <- DT::renderDataTable(
+        #     DT::datatable(
+        #         no_con, extensions = 'FixedColumns', options = list(
+        #             pageLength = 3,
+        #             bSort = FALSE,
+        #             scrollX = TRUE,
+        #             fixedColumns = TRUE
+        #
+        #         )
+        #     )
+        # )
+        
+        #Graphing regular and control normalized bar graphs<- Working
+        style <- theme(plot.title = element_text(face="bold", hjust = 0.5), 
+                       axis.title.y = element_text(face="bold"), 
+                       axis.text.x = element_text(size=9, face="bold", angle=30, hjust = 1, vjust = 1), 
+                       plot.margin = margin(10,10,10,50, "pt"))
+        
+        style2 <- theme(plot.title = element_text(face="bold", hjust = 0.5, size = 16), 
+                        axis.title = element_text(face="bold", size = 14), 
+                        axis.text = element_text(size = 14, face = "bold", color = "black"), 
+                        axis.line = element_line(size = 1.25), 
+                        axis.ticks = element_line(size = 1.25), 
+                        axis.ticks.length = unit(10, "pt"), 
+                        legend.justification=c(0,0), 
+                        legend.position=c(1,1), 
+                        plot.margin = margin(10,10,10,50, "pt"))
+        
+        
         if(input$brightfield == T){
             cell_count <- ggplot(data=sum_stat)+
                 geom_col(mapping=aes(x=factor(ID), y=cell_count_mean), fill="grey")+
@@ -199,6 +304,37 @@ server <- function(input, output) {
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate, " ",Plate, " Cell Count"), x=NULL, y = "Cell Count")
             output$cc_hist <- renderPlot({cell_count})
+            if(con != ""){
+                cell_count_con_graph <- ggplot(data = no_con)+
+                    geom_col(mapping = aes(x=factor(ID), y = cell_count_mean_con), fill = "grey")+
+                    geom_errorbar(aes(x=factor(ID), ymin = cell_count_mean_con - cell_count_stdev_con, ymax = cell_count_mean_con + cell_count_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = no_con$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Cell Count"), x = NULL,y = paste0(con, " Normalzed Cell Count"))
+                output$cc_hist_con <- renderPlot({cell_count_con_graph})
+                if(bg != ""){
+                    cell_count_bg_graph <- ggplot(data = filter_sum_stat)+
+                        geom_point(filter_sum_stat,
+                                   mapping = aes(x = log10(Dose), y = cell_count_mean_sub),
+                                   size = 3)+
+                        geom_errorbar(filter_sum_stat,
+                                      mapping = aes(x = log10(Dose), ymin = cell_count_mean_sub - cell_count_stdev_sub, ymax = cell_count_mean_sub + cell_count_stdev_sub),
+                                      width = 0.04)+
+                        geom_smooth(filter_sum_stat,
+                                    mapping = aes(x = log10(Dose), y = cell_count_mean_sub),
+                                    se = F, color = "black")+
+                        scale_x_continuous(labels = scales::math_format())+
+                        coord_cartesian(xlim = c(lowerxlim,upperxlim),
+                                        ylim = c(0, 100),
+                                        expand = FALSE)+
+                        labs(title = paste0(cleandate," ",Plate," Cell Count Mean"),
+                             x="Mefenamanic Acid Dose",
+                             y = "Cell Count")+
+                        theme_classic()+
+                        style2
+                    output$cc_hist_3 <- renderPlot({cell_count_bg_graph})
+                    
+                }
+            }
         }
         
         if(input$b == T){
@@ -208,6 +344,37 @@ server <- function(input, output) {
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate," Blue Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
             output$b_hist <- renderPlot({blue})
+            if(con != ""){
+                b_con_graph <- ggplot(data = no_con)+
+                    geom_col(mapping = aes(x=factor(ID), y = b_mean_con), fill = "blue")+
+                    geom_errorbar(aes(x=factor(ID), ymin = b_mean_con - b_stdev_con, ymax = b_mean_con + b_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = no_con$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Blue Channel Mean Intensity"), x = NULL, y = paste0(con, " Normalzed Mean Intensity"))
+                output$b_hist_con <- renderPlot({b_con_graph})
+                if(bg != ""){
+                    b_bg_graph <- ggplot(data = filter_sum_stat)+
+                        geom_point(filter_sum_stat,
+                                   mapping = aes(x = log10(Dose), y = b_mean_sub),
+                                   size = 3)+
+                        geom_errorbar(filter_sum_stat,
+                                      mapping = aes(x = log10(Dose), ymin = b_mean_sub - b_stdev_sub, ymax = b_mean_sub + b_stdev_sub),
+                                      width = 0.04)+
+                        geom_smooth(filter_sum_stat,
+                                    mapping = aes(x = log10(Dose), y = b_mean_sub),
+                                    se = F, color = "black")+
+                        scale_x_continuous(labels = scales::math_format())+
+                        coord_cartesian(xlim = c(lowerxlim,upperxlim),
+                                        ylim = c(0, 100),
+                                        expand = FALSE)+
+                        labs(title = paste0(cleandate," ",Plate," Blue Channel Mean Intensity"),
+                             x="Mefenamanic Acid Dose",
+                             y = "Blue Fluorescence")+
+                        theme_classic()+
+                        style2
+                    output$b_hist_3 <- renderPlot({b_bg_graph})
+                    
+                }
+            }
         }
         
         if(input$g == T){
@@ -217,6 +384,37 @@ server <- function(input, output) {
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate," Green Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
             output$g_hist <- renderPlot({green})
+            if(con != ""){
+                g_con_graph <- ggplot(data = no_con)+
+                    geom_col(mapping = aes(x=factor(ID), y = g_mean_con), fill = "green")+
+                    geom_errorbar(aes(x=factor(ID), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = no_con$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Green Channel Mean Intensity"), x = NULL, y = paste0(con, " Normalzed Mean Intensity"))
+                output$g_hist_con <- renderPlot({g_con_graph})
+                if(bg != ""){
+                    g_bg_graph <- ggplot(data = filter_sum_stat)+
+                        geom_point(filter_sum_stat,
+                                   mapping = aes(x = log10(Dose), y = g_mean_sub),
+                                   size = 3)+
+                        geom_errorbar(filter_sum_stat,
+                                      mapping = aes(x = log10(Dose), ymin = g_mean_sub - g_stdev_sub, ymax = g_mean_sub + g_stdev_sub),
+                                      width = 0.04)+
+                        geom_smooth(filter_sum_stat,
+                                    mapping = aes(x = log10(Dose), y = g_mean_sub),
+                                    se = F, color = "black")+
+                        scale_x_continuous(labels = scales::math_format())+
+                        coord_cartesian(xlim = c(lowerxlim,upperxlim),
+                                        ylim = c(0, 100),
+                                        expand = FALSE)+
+                        labs(title = paste0(cleandate," ",Plate," Green Channel Mean Intensity"),
+                             x="Mefenamanic Acid Dose",
+                             y = "Rhodamine123 Fluorescence")+
+                        theme_classic()+
+                        style2
+                    output$g_hist_3 <- renderPlot({g_bg_graph})
+                    
+                }
+            }
         }
         
         if(input$r == T){
@@ -226,6 +424,37 @@ server <- function(input, output) {
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate," Red Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
             output$r_hist <- renderPlot({red})
+            if(con != ""){
+                r_con_graph <- ggplot(data = no_con)+
+                    geom_col(mapping = aes(x=factor(ID), y = r_mean_con), fill = "red")+
+                    geom_errorbar(aes(x=factor(ID), ymin = r_mean_con - r_stdev_con, ymax = r_mean_con + r_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = no_con$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Red Channel Mean Intensity"), x = NULL, y = paste0(con, " Normalzed Mean Intensity"))
+                output$r_hist_con <- renderPlot({r_con_graph})
+                if(bg != ""){
+                    r_bg_graph <- ggplot(data = filter_sum_stat)+
+                        geom_point(filter_sum_stat,
+                                   mapping = aes(x = log10(Dose), y = r_mean_sub),
+                                   size = 3)+
+                        geom_errorbar(filter_sum_stat,
+                                      mapping = aes(x = log10(Dose), ymin = r_mean_sub - r_stdev_sub, ymax = r_mean_sub + r_stdev_sub),
+                                      width = 0.04)+
+                        geom_smooth(filter_sum_stat,
+                                    mapping = aes(x = log10(Dose), y = r_mean_sub),
+                                    se = F, color = "black")+
+                        scale_x_continuous(labels = scales::math_format())+
+                        coord_cartesian(xlim = c(lowerxlim,upperxlim),
+                                        ylim = c(0, 100),
+                                        expand = FALSE)+
+                        labs(title = paste0(cleandate," ",Plate," Red Channel Mean Intensity"),
+                             x="Mefenamanic Acid Dose",
+                             y = "MitoTracker Fluorescence")+
+                        theme_classic()+
+                        style2
+                    output$r_hist_3 <- renderPlot({r_bg_graph})
+                    
+                }
+            }
         }
         
         if(input$fr == T){
@@ -235,6 +464,37 @@ server <- function(input, output) {
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate," Far Red Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
             output$fr_hist <- renderPlot({far_red})
+            if(con != ""){
+                fr_con_graph <- ggplot(data = no_con)+
+                    geom_col(mapping = aes(x=factor(ID), y = fr_mean_con), fill = "purple")+
+                    geom_errorbar(aes(x=factor(ID), ymin = fr_mean_con - fr_stdev_con, ymax = fr_mean_con + fr_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = no_con$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Far Red Channel Mean Intensity"), x = NULL,y = paste0(con, " Normalzed Mean Intensity"))
+                output$fr_hist_con <- renderPlot({fr_con_graph})
+                if(bg != ""){
+                    fr_bg_graph <- ggplot(data = filter_sum_stat)+
+                        geom_point(filter_sum_stat,
+                                   mapping = aes(x = log10(Dose), y = fr_mean_sub),
+                                   size = 3)+
+                        geom_errorbar(filter_sum_stat,
+                                      mapping = aes(x = log10(Dose), ymin = fr_mean_sub - fr_stdev_sub, ymax = fr_mean_sub + fr_stdev_sub),
+                                      width = 0.04)+
+                        geom_smooth(filter_sum_stat,
+                                    mapping = aes(x = log10(Dose), y = fr_mean_sub),
+                                    se = F, color = "black")+
+                        scale_x_continuous(labels = scales::math_format())+
+                        coord_cartesian(xlim = c(lowerxlim,upperxlim),
+                                        ylim = c(0, 100),
+                                        expand = FALSE)+
+                        labs(title = paste0(cleandate," ",Plate," Far Red Channel Mean Intensity"),
+                             x="Mefenamanic Acid Dose",
+                             y = "CellRox Fluorescence")+
+                        theme_classic()+
+                        style2
+                    output$fr_hist_3 <- renderPlot({fr_bg_graph})
+                    
+                }
+            }
         }
         
     })
