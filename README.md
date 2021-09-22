@@ -5,10 +5,6 @@ It works decently well.
 
 To Do List:
   - Add error catches so it tells the user what's wrong instead of just closing the program.
-  - Test with a different file
-  - Add background sub calculations
-  - Add background sub graphs tabBox
-  - Make a button to download the graphs and the end data file.
   - Figure out how to change starting values like in Computational Physics
   - Figure out how to compute significance and display it on the graphs
-  - Make inputs for the stains used and automate titles with it
+  - Add user input for lower and upper x limit on line graph

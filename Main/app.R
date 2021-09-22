@@ -7,8 +7,8 @@ ui <- dashboardPage(
     dashboardHeader(title = "GraphMaster 9000"),
     dashboardSidebar(
         sidebarMenu(
-            menuItem("Home", tabName = "input_tab", icon = icon("dashboard")),
-            menuItem("Pretty Graphs", tabName = "graph_tab", icon = icon("th"))
+            menuItem("Home", tabName = "input_tab", icon = icon("home")),
+            menuItem("Graphs", tabName = "graph_tab", icon = icon("chart-bar"))
         )
     ),
     dashboardBody(
@@ -27,8 +27,9 @@ ui <- dashboardPage(
                     ),
                     fluidRow(
                         box(
-                            title = strong("Select the channels used."),
-                            width = 4,
+                          title = strong("Select the channels used."),
+                          width = 4,
+                          column(width = 5,
                             checkboxInput(inputId = "brightfield",
                                           label = "Brightfield",
                                           value = T),
@@ -43,7 +44,22 @@ ui <- dashboardPage(
                                           value = T),
                             checkboxInput(inputId = "fr",
                                           label = "Far Red",
-                                          value = T),
+                                          value = T)
+                          ),
+                          column(width = 7,
+                                 selectInput(inputId = "b_dye",
+                                           label = "Blue channel dye (optional)",
+                                           choices = c("", "Hoechst")),
+                                 selectInput(inputId = "g_dye",
+                                           label = "Green channel dye (optional)",
+                                           choices = c("","DiO", "Rhodamine123")),
+                                 selectInput(inputId = "r_dye",
+                                           label = "Red channel dye (optional)",
+                                           choices = c("","MitoTacker Orange", "MitoTracker Red")),
+                                 selectInput(inputId = "fr_dye",
+                                           label = "Far Red channel dye (optional)",
+                                           choices = c("","CyP-AP BioTracker", "CellRox"))
+                                 )
                         ),
                         box(
                             width = 4,
@@ -56,6 +72,10 @@ ui <- dashboardPage(
                             textInput(inputId = "background", 
                                       label = "Type the name of the treatment you would like subtracted as background. (optional)", 
                                       value = ""),
+                            textInput(inputId = "doses",
+                                      label = "Type a comma separated list of your doses (optional). 
+                                      Any treatments you don't want included on the line graph set as 0......i.e. 0, 1e-5, 0.0001, 0.0002",
+                                      value = "")
                         ),
                         box(
                             width = 4,
@@ -79,7 +99,7 @@ ui <- dashboardPage(
                                          label = "Any well with a cell count below this number will not be counted. Used to filter missing spheroids",
                                          value = 1000),
                             actionButton(inputId = "action", label = "Submit")
-                        ),
+                        )
                     ),
             ),
             tabItem(tabName = "graph_tab",
@@ -87,30 +107,35 @@ ui <- dashboardPage(
                     fluidRow(
                         tabBox(
                             title = strong("Bar Graphs"), id = "tabset1",
-                            tabPanel("Cell Count", h5(downloadButton("downloadcc1", "Download"), align = "right"), plotOutput(outputId = "r_hist")),
-                            tabPanel("Blue", h5(downloadButton("downloadb1", "Download"), align = "right"), plotOutput(outputId = "r_hist")),
-                            tabPanel("Green", h5(downloadButton("downloadg1", "Download"), align = "right"), plotOutput(outputId = "r_hist")),
+                            tabPanel("Cell Count", h5(downloadButton("downloadcc1", "Download"), align = "right"), plotOutput(outputId = "cc_hist")),
+                            tabPanel("Blue", h5(downloadButton("downloadb1", "Download"), align = "right"), plotOutput(outputId = "b_hist")),
+                            tabPanel("Green", h5(downloadButton("downloadg1", "Download"), align = "right"), plotOutput(outputId = "g_hist")),
                             tabPanel("Red", h5(downloadButton("downloadr1", "Download"), align = "right"), plotOutput(outputId = "r_hist")),
-                            tabPanel("Far Red", h5(downloadButton("downloadfr1", "Download"), align = "right"), plotOutput(outputId = "r_hist"))
+                            tabPanel("Far Red", h5(downloadButton("downloadfr1", "Download"), align = "right"), plotOutput(outputId = "fr_hist"))
                         ),
                         tabBox(
-                            title = strong("Control Normalized Bar Graphs"), id = "tabset2",
-                            tabPanel("Cell Count", h5(downloadButton("downloadcc2", "Download"), align = "right"), plotOutput(outputId = "cc_hist_con")),
-                            tabPanel("Blue", h5(downloadButton("downloadb2", "Download"), align = "right"), plotOutput(outputId = "b_hist_con")),
-                            tabPanel("Green", h5(downloadButton("downloadg2", "Download"), align = "right"), plotOutput(outputId = "g_hist_con")),
-                            tabPanel("Red", h5(downloadButton("downloadr2", "Download"), align = "right"), plotOutput(outputId = "r_hist_con")),
-                            tabPanel("Far Red", h5(downloadButton("downloadfr2", "Download"), align = "right"), plotOutput(outputId = "fr_hist_con"))
+                            title = strong("Normalized Bar Graphs"), id = "tabset2",
+                            tabPanel("Cell Count", h5(downloadButton("downloadcc2", "Download"), align = "right"), plotOutput(outputId = "cc_hist_2")),
+                            tabPanel("Blue", h5(downloadButton("downloadb2", "Download"), align = "right"), plotOutput(outputId = "b_hist_2")),
+                            tabPanel("Green", h5(downloadButton("downloadg2", "Download"), align = "right"), plotOutput(outputId = "g_hist_2")),
+                            tabPanel("Red", h5(downloadButton("downloadr2", "Download"), align = "right"), plotOutput(outputId = "r_hist_2")),
+                            tabPanel("Far Red", h5(downloadButton("downloadfr2", "Download"), align = "right"), plotOutput(outputId = "fr_hist_2"))
                         )
                         
                     ),
                     fluidRow(
                         tabBox(
-                            title = strong("Boring Graphs"), id = "tabset3",
+                            title = strong("Line Graphs"), id = "tabset3",
                             tabPanel("Cell Count", h5(downloadButton("downloadcc3", "Download"), align = "right"), plotOutput(outputId = "cc_hist_3")),
                             tabPanel("Blue", h5(downloadButton("downloadb3", "Download"), align = "right"), plotOutput(outputId = "b_hist_3")),
                             tabPanel("Green", h5(downloadButton("downloadg3", "Download"), align = "right"), plotOutput(outputId = "g_hist_3")),
                             tabPanel("Red", h5(downloadButton("downloadr3", "Download"), align = "right"), plotOutput(outputId = "r_hist_3")),
                             tabPanel("Far Red", h5(downloadButton("downloadfr3", "Download"), align = "right"), plotOutput(outputId = "fr_hist_3"))
+                        ),
+                        box(
+                            title = strong("Download Output CSV file"), width = 6,
+                            h5(downloadButton("download_csv", "Download"), align = "center")
+                            
                         )
                     )
                 )
@@ -144,8 +169,13 @@ server <- function(input, output) {
         bg <- isolate(input$background)
         Plate <- isolate(input$plate)
         
+        ifelse(input$b_dye != "", b_dye <-  input$b_dye, b_dye <- "Blue Channel")
+        ifelse(input$g_dye != "", g_dye <-  input$g_dye, g_dye <-  "Green Channel")
+        ifelse(input$r_dye != "", r_dye <-  input$r_dye, r_dye <-  "Red Channel")
+        ifelse(input$fr_dye != "", fr_dye <-  input$fr_dye, fr_dye <-  "Far Red Channel")
+        
         #If the channel box is checked then rename that column. <- WORKING
-        Cell_Stat <- rename(Cell_Stat, ID = GraphSeriesNo,
+        Cell_Stat <- rename(Cell_Stat, 
                             cell_count = if(input$brightfield == T) isolate(input$cc_header),
                             b_avg = if(input$b == T) isolate(input$b_header),
                             g_avg = if(input$g == T) isolate(input$g_header),
@@ -160,7 +190,7 @@ server <- function(input, output) {
         cleandate <- date%>%
             str_replace_all("_", "/")
         
-        #fms=filter missing spheroids. This excludes data from any well below a certain cell count threshold. <- WORKING
+        #fms=filter missing spheroGraphSeriesNos. This excludes data from any well below a certain cell count threshold. <- WORKING
         #Normally this value sits at around 1000 but may need to be tweaked. 
         #You can double check that it's filtering accurately by comparing the excluded rows with pictures of the plate.
         
@@ -176,9 +206,9 @@ server <- function(input, output) {
 
         if (input$brightfield == T){ # <- WORKING
             con_norm <- mutate(con_norm, 
-                               cell_count_sub = cell_count - mean(cell_count[Compound == bg]),
-                               cell_count_sub_norm =100* cell_count_sub/mean(cell_count_sub[Compound == con]),
-                               cell_count_con = (cell_count/mean(cell_count[Compound == con])))
+                               cc_sub = cell_count - mean(cell_count[Compound == bg]),
+                               cc_sub_norm =100* cc_sub/mean(cc_sub[Compound == con]),
+                               cc_con = (cell_count/mean(cell_count[Compound == con])))
         }
         
         if(input$b == T){
@@ -214,14 +244,14 @@ server <- function(input, output) {
         
         #This makes a dataframe with means and stdevs of each treatment and control normalized treatments. <- WORKING
         sum_stat <- con_norm%>%  #sum_stat = Summary Statistics
-            group_by(ID, Compound, Dose)%>%
+            group_by(GraphSeriesNo, Compound, Dose)%>%
             summarise(#Ridiculously large chuck of ifelse statements, first up is cell count.
-                cell_count_mean = ifelse(input$brightfield == T, mean(cell_count, na.rm = TRUE), 0),
-                cell_count_stdev = ifelse(input$brightfield == T, sd(cell_count, na.rm = TRUE), 0),
-                cell_count_mean_con = ifelse(input$brightfield == T, mean(cell_count_con), 0),
-                cell_count_stdev_con = ifelse(input$brightfield == T, sd(cell_count_con), 0),
-                cell_count_mean_sub = ifelse(input$brightfield == T, mean(cell_count_sub_norm), 0), 
-                cell_count_stdev_sub = ifelse(input$brightfield == T, sd(cell_count_sub_norm), 0),
+                cc_mean = ifelse(input$brightfield == T, mean(cell_count, na.rm = TRUE), 0),
+                cc_stdev = ifelse(input$brightfield == T, sd(cell_count, na.rm = TRUE), 0),
+                cc_mean_con = ifelse(input$brightfield == T, mean(cc_con), 0),
+                cc_stdev_con = ifelse(input$brightfield == T, sd(cc_con), 0),
+                cc_mean_sub = ifelse(input$brightfield == T, mean(cc_sub_norm), 0), 
+                cc_stdev_sub = ifelse(input$brightfield == T, sd(cc_sub_norm), 0),
                 #Then on to Blue
                 b_mean = ifelse(input$b == T, mean(b_avg, na.rm = TRUE), 0),
                 b_stdev = ifelse(input$b == T, sd(b_avg, na.rm = TRUE), 0),
@@ -251,13 +281,22 @@ server <- function(input, output) {
                 fr_mean_sub = ifelse(input$fr == T, mean(fr_sub_norm), 0), 
                 fr_stdev_sub = ifelse(input$fr == T, sd(fr_sub_norm), 0)
             )
-        no_con <- sum_stat%>% #A dataframe without the control treatment
-            filter(Compound != con)
+        output$download_csv <- downloadHandler(
+            filename = function() {
+                paste0(date,"_", Plate,"_Data_Analysis_Stats.csv")
+            },
+            content = function(file) {
+                write.csv(sum_stat, file)
+            }
+        )
         
-        #####Start of "boring graphs" section.
-        #Need to automate the dose column
-        sum_stat$Dose = c(1e-9,0,30,55,80,105,130,155,180,195,390,0)*1e-6
-        max_dose <- max(sum_stat$Dose)
+        #####Start of "line graphs" section.
+        #Takes user input for doses
+        if (isolate(input$doses) != ""){
+          doses <- as.numeric(unlist(strsplit(c(isolate(input$doses)), ",")))
+          sum_stat$Dose = doses
+        }
+        
         filter_sum_stat <- sum_stat%>%
             filter(Dose != 0)
 
@@ -285,11 +324,11 @@ server <- function(input, output) {
         
         if(input$brightfield == T){
             cc_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(ID), y=cell_count_mean), fill="grey")+
-                geom_errorbar(aes(x = factor(ID), ymin = cell_count_mean - cell_count_stdev,  ymax = cell_count_mean + cell_count_stdev), width = 0.2)+
+                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill="grey")+
+                geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate, " ",Plate, " Cell Count"), x=NULL, y = "Cell Count")
-            output$cc_hist <- renderPlot({cell_count_graph})
+            output$cc_hist <- renderPlot({cc_graph})
             output$downloadcc1 <- downloadHandler(
                 filename = function() {
                     paste0(date,"_", Plate,"_Cell_Count_Graph.svg")
@@ -299,12 +338,12 @@ server <- function(input, output) {
                 }
             )
             if(con != ""){
-                cc_con_graph <- ggplot(data = no_con)+
-                    geom_col(mapping = aes(x=factor(ID), y = cell_count_mean_con), fill = "grey")+
-                    geom_errorbar(aes(x=factor(ID), ymin = cell_count_mean_con - cell_count_stdev_con, ymax = cell_count_mean_con + cell_count_stdev_con), width = 0.2)+
-                    scale_x_discrete(labels = no_con$Compound)+
-                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Cell Count"), x = NULL,y = paste0(con, " Normalzed Cell Count"))
-                output$cc_hist_con <- renderPlot({cell_count_con_graph})
+                cc_con_graph <- ggplot(data = sum_stat)+
+                    geom_col(mapping = aes(x=factor(GraphSeriesNo), y = cc_mean_con), fill = "grey")+
+                    geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = cc_mean_con - cc_stdev_con, ymax = cc_mean_con + cc_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = sum_stat$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," ", con, " Normalized Cell Count"), x = NULL,y = paste0("Normalzed Cell Count"))
+                output$cc_hist_2 <- renderPlot({cc_con_graph})
                 output$downloadcc2 <- downloadHandler(
                     filename = function() {
                         paste0(date,"_", Plate,"_Cell_Count_Control_Graph.svg")
@@ -316,24 +355,24 @@ server <- function(input, output) {
                 if(bg != ""){
                     cc_bg_graph <- ggplot(data = filter_sum_stat)+
                         geom_point(filter_sum_stat,
-                                   mapping = aes(x = log10(Dose), y = cell_count_mean_sub),
+                                   mapping = aes(x = log10(Dose), y = cc_mean_sub),
                                    size = 3)+
                         geom_errorbar(filter_sum_stat,
-                                      mapping = aes(x = log10(Dose), ymin = cell_count_mean_sub - cell_count_stdev_sub, ymax = cell_count_mean_sub + cell_count_stdev_sub),
+                                      mapping = aes(x = log10(Dose), ymin = cc_mean_sub - cc_stdev_sub, ymax = cc_mean_sub + cc_stdev_sub),
                                       width = 0.04)+
                         geom_smooth(filter_sum_stat,
-                                    mapping = aes(x = log10(Dose), y = cell_count_mean_sub),
+                                    mapping = aes(x = log10(Dose), y = cc_mean_sub),
                                     se = F, color = "black")+
                         scale_x_continuous(labels = scales::math_format())+
                         coord_cartesian(xlim = c(lowerxlim,upperxlim),
                                         ylim = c(0, 100),
                                         expand = FALSE)+
-                        labs(title = paste0(cleandate," ",Plate," Cell Count Mean"),
+                        labs(title = paste0(cleandate," ",Plate," Cell Count"),
                              x="Mefenamanic Acid Dose",
-                             y = "Cell Count")+
+                             y = "Cell Count Mean")+
                         theme_classic()+
                         style2
-                    output$cc_hist_3 <- renderPlot({cell_count_bg_graph})
+                    output$cc_hist_3 <- renderPlot({cc_bg_graph})
                     output$downloadcc3 <- downloadHandler(
                         filename = function() {
                             paste0(date,"_", Plate,"_Cell_Count_Line_Graph.svg")
@@ -342,18 +381,18 @@ server <- function(input, output) {
                             ggsave(file, plot = cc_bg_graph, width = 8, height = 5, device = svg)
                         }
                     )
-                    
+
                 }
             }
         }
         
         if(input$b == T){
             b_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(ID), y=b_mean), fill="blue")+
-                geom_errorbar(aes(x = factor(ID), ymin = b_mean - b_stdev,  ymax = b_mean + b_stdev), width = 0.2)+
+                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=b_mean), fill="blue")+
+                geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_stdev,  ymax = b_mean + b_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
-                style + labs(title = paste0(cleandate," ",Plate," Blue Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
-            output$b_hist <- renderPlot({blue_graph})
+                style + labs(title = paste0(cleandate," ",Plate, " ", b_dye, " Mean Intensity"), x = NULL , y = paste0(b_dye," Mean Intensity"))
+            output$b_hist <- renderPlot({b_graph})
             output$downloadb1 <- downloadHandler(
                 filename = function() {
                     paste0(date,"_", Plate,"_Blue_Graph.svg")
@@ -363,12 +402,12 @@ server <- function(input, output) {
                 }
             )
             if(con != ""){
-                b_con_graph <- ggplot(data = no_con)+
-                    geom_col(mapping = aes(x=factor(ID), y = b_mean_con), fill = "blue")+
-                    geom_errorbar(aes(x=factor(ID), ymin = b_mean_con - b_stdev_con, ymax = b_mean_con + b_stdev_con), width = 0.2)+
-                    scale_x_discrete(labels = no_con$Compound)+
-                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Blue Channel Mean Intensity"), x = NULL, y = paste0(con, " Normalzed Mean Intensity"))
-                output$b_hist_con <- renderPlot({b_con_graph})
+                b_con_graph <- ggplot(data = sum_stat)+
+                    geom_col(mapping = aes(x=factor(GraphSeriesNo), y = b_mean_con), fill = "blue")+
+                    geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = b_mean_con - b_stdev_con, ymax = b_mean_con + b_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = sum_stat$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," ",con," Normalized ", b_dye, " Mean Intensity"), x = NULL, y = paste0(b_dye, " Normalized Mean Intensity"))
+                output$b_hist_2 <- renderPlot({b_con_graph})
                 output$downloadb2 <- downloadHandler(
                     filename = function() {
                         paste0(date,"_", Plate,"_Blue_Control_Graph.svg")
@@ -392,9 +431,9 @@ server <- function(input, output) {
                         coord_cartesian(xlim = c(lowerxlim,upperxlim),
                                         ylim = c(0, 100),
                                         expand = FALSE)+
-                        labs(title = paste0(cleandate," ",Plate," Blue Channel Mean Intensity"),
-                             x="Mefenamanic Acid Dose",
-                             y = "Blue Fluorescence")+
+                        labs(title = paste0(cleandate," ",Plate, " ", b_dye, " Mean Intensity"),
+                             x="Dose",
+                             y = paste0(b_dye," Mean Intensity"))+
                         theme_classic()+
                         style2
                     output$b_hist_3 <- renderPlot({b_bg_graph})
@@ -413,11 +452,11 @@ server <- function(input, output) {
         
         if(input$g == T){
             g_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(ID), y=g_mean), fill="green")+
-                geom_errorbar(aes(x = factor(ID), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)+
+                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=g_mean), fill="green")+
+                geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
-                style + labs(title = paste0(cleandate," ",Plate," Green Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
-            output$g_hist <- renderPlot({green_graph})
+                style + labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"), x = NULL , y = paste0(g_dye," Mean Intensity"))
+            output$g_hist <- renderPlot({g_graph})
             output$downloadg1 <- downloadHandler(
                 filename = function() {
                     paste0(date,"_", Plate,"_Green_Graph.svg")
@@ -427,12 +466,12 @@ server <- function(input, output) {
                 }
             )
             if(con != ""){
-                g_con_graph <- ggplot(data = no_con)+
-                    geom_col(mapping = aes(x=factor(ID), y = g_mean_con), fill = "green")+
-                    geom_errorbar(aes(x=factor(ID), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
-                    scale_x_discrete(labels = no_con$Compound)+
-                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Green Channel Mean Intensity"), x = NULL, y = paste0(con, " Normalzed Mean Intensity"))
-                output$g_hist_con <- renderPlot({g_con_graph})
+                g_con_graph <- ggplot(data = sum_stat)+
+                    geom_col(mapping = aes(x=factor(GraphSeriesNo), y = g_mean_con), fill = "green")+
+                    geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = sum_stat$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", g_dye, " Mean Intensity"), x = NULL, y = paste0(g_dye," Normalized Mean Intensity"))
+                output$g_hist_2 <- renderPlot({g_con_graph})
                 output$downloadg2 <- downloadHandler(
                     filename = function() {
                         paste0(date,"_", Plate,"_Green_control_Graph.svg")
@@ -456,9 +495,9 @@ server <- function(input, output) {
                         coord_cartesian(xlim = c(lowerxlim,upperxlim),
                                         ylim = c(0, 100),
                                         expand = FALSE)+
-                        labs(title = paste0(cleandate," ",Plate," Green Channel Mean Intensity"),
-                             x="Mefenamanic Acid Dose",
-                             y = "Rhodamine123 Fluorescence")+
+                        labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"),
+                             x="Dose",
+                             y = paste0(g_dye," Mean Intensity"))+
                         theme_classic()+
                         style2
                     output$g_hist_3 <- renderPlot({g_bg_graph})
@@ -470,18 +509,18 @@ server <- function(input, output) {
                             ggsave(file, plot = g_bg_graph, width = 8, height = 5, device = svg)
                         }
                     )
-                    
+
                 }
             }
         }
         
         if(input$r == T){
             r_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(ID), y=r_mean), fill="red")+
-                geom_errorbar(aes(x = factor(ID), ymin = r_mean - r_stdev,  ymax = r_mean + r_stdev), width = 0.2)+
+                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=r_mean), fill="red")+
+                geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_stdev,  ymax = r_mean + r_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
-                style + labs(title = paste0(cleandate," ",Plate," Red Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
-            output$r_hist <- renderPlot({red_graph})
+                style + labs(title = paste0(cleandate," ",Plate, " ", r_dye, " Mean Intensity"), x = NULL , y = paste0(r_dye," Mean Intensity"))
+            output$r_hist <- renderPlot({r_graph})
             #Download button for the graph
             output$downloadr1 <- downloadHandler(
                 filename = function() {
@@ -492,12 +531,12 @@ server <- function(input, output) {
                 }
             )
             if(con != ""){
-                r_con_graph <- ggplot(data = no_con)+
-                    geom_col(mapping = aes(x=factor(ID), y = r_mean_con), fill = "red")+
-                    geom_errorbar(aes(x=factor(ID), ymin = r_mean_con - r_stdev_con, ymax = r_mean_con + r_stdev_con), width = 0.2)+
-                    scale_x_discrete(labels = no_con$Compound)+
-                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Red Channel Mean Intensity"), x = NULL, y = paste0(con, " Normalzed Mean Intensity"))
-                output$r_hist_con <- renderPlot({r_con_graph})
+                r_con_graph <- ggplot(data = sum_stat)+
+                    geom_col(mapping = aes(x=factor(GraphSeriesNo), y = r_mean_con), fill = "red")+
+                    geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_stdev_con, ymax = r_mean_con + r_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = sum_stat$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", r_dye, " Mean Intensity"), x = NULL, y = paste0(r_dye, " Normalized Mean Intensity"))
+                output$r_hist_2 <- renderPlot({r_con_graph})
                 output$downloadr2 <- downloadHandler(
                     filename = function() {
                         paste0(date,"_", Plate,"_Red_Control_Graph.svg")
@@ -521,9 +560,9 @@ server <- function(input, output) {
                         coord_cartesian(xlim = c(lowerxlim,upperxlim),
                                         ylim = c(0, 100),
                                         expand = FALSE)+
-                        labs(title = paste0(cleandate," ",Plate," Red Channel Mean Intensity"),
-                             x="Mefenamanic Acid Dose",
-                             y = "MitoTracker Fluorescence")+
+                        labs(title = paste0(cleandate," ",Plate, " ", r_dye, " Mean Intensity"),
+                             x="Dose",
+                             y = paste0(r_dye, " Mean Intensity"))+
                         theme_classic()+
                         style2
                     output$r_hist_3 <- renderPlot({r_bg_graph})
@@ -535,18 +574,18 @@ server <- function(input, output) {
                             ggsave(file, plot = r_bg_graph, width = 8, height = 5, device = svg)
                         }
                     )
-                    
+
                 }
             }
         }
         
         if(input$fr == T){
             fr_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(ID), y=fr_mean), fill="purple")+
-                geom_errorbar(aes(x = factor(ID), ymin = fr_mean - fr_stdev,  ymax = fr_mean + fr_stdev), width = 0.2)+
+                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=fr_mean), fill="purple")+
+                geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_stdev,  ymax = fr_mean + fr_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
-                style + labs(title = paste0(cleandate," ",Plate," Far Red Channel Mean Intensity"), x = NULL , y = "Mean Intensity")
-            output$fr_hist <- renderPlot({far_red_graph})
+                style + labs(title = paste0(cleandate," ",Plate, " ", fr_dye, " Mean Intensity"), x = NULL , y = paste0(fr_dye, " Mean Intensity"))
+            output$fr_hist <- renderPlot({fr_graph})
             output$downloadfr1 <- downloadHandler(
                 filename = function() {
                     paste0(date,"_", Plate,"_Far_Red_Graph.svg")
@@ -556,12 +595,14 @@ server <- function(input, output) {
                 }
             )
             if(con != ""){
-                fr_con_graph <- ggplot(data = no_con)+
-                    geom_col(mapping = aes(x=factor(ID), y = fr_mean_con), fill = "purple")+
-                    geom_errorbar(aes(x=factor(ID), ymin = fr_mean_con - fr_stdev_con, ymax = fr_mean_con + fr_stdev_con), width = 0.2)+
-                    scale_x_discrete(labels = no_con$Compound)+
-                    style + labs(title = paste0(cleandate, " ",Plate," Normalized Far Red Channel Mean Intensity"), x = NULL,y = paste0(con, " Normalzed Mean Intensity"))
-                output$fr_hist_con <- renderPlot({fr_con_graph})
+                fr_con_graph <- ggplot(data = sum_stat)+
+                    geom_col(mapping = aes(x=factor(GraphSeriesNo), y = fr_mean_con), fill = "purple")+
+                    geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = fr_mean_con - fr_stdev_con, ymax = fr_mean_con + fr_stdev_con), width = 0.2)+
+                    scale_x_discrete(labels = sum_stat$Compound)+
+                    style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", fr_dye, " Mean Intensity"), 
+                                 x = NULL,
+                                 y = paste0(fr_dye, " Normalzed Mean Intensity"))
+                output$fr_hist_2 <- renderPlot({fr_con_graph})
                 output$downloadfr2 <- downloadHandler(
                     filename = function() {
                         paste0(date,"_", Plate,"_Far_Red_Control_Graph.svg")
@@ -585,9 +626,9 @@ server <- function(input, output) {
                         coord_cartesian(xlim = c(lowerxlim,upperxlim),
                                         ylim = c(0, 100),
                                         expand = FALSE)+
-                        labs(title = paste0(cleandate," ",Plate," Far Red Channel Mean Intensity"),
-                             x="Mefenamanic Acid Dose",
-                             y = "CellRox Fluorescence")+
+                        labs(title = paste0(cleandate," ",Plate, " ", fr_dye, " Mean Intensity"),
+                             x="Dose",
+                             y = paste0(fr_dye, " Mean Intensity"))+
                         theme_classic()+
                         style2
                     output$fr_hist_3 <- renderPlot({fr_bg_graph})
@@ -599,7 +640,7 @@ server <- function(input, output) {
                             ggsave(file, plot = fr_graph, width = 8, height = 5, device = svg)
                         }
                     )
-                    
+
                 }
             }
         }
