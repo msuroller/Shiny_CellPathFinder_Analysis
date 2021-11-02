@@ -2,6 +2,7 @@ library(shiny)
 library(shinydashboard)
 library(tidyverse)
 library(DT)
+options(shiny.maxRequestSize = 100*1024^2)
 
 ui <- dashboardPage(
     dashboardHeader(title = "GraphMaster 9000"),
