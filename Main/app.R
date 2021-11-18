@@ -76,7 +76,17 @@ ui <- dashboardPage(
                             textInput(inputId = "doses",
                                       label = "Type a comma separated list of your doses (optional). 
                                       Any treatments you don't want included on the line graph set as 0......i.e. 0, 1e-5, 0.0001, 0.0002",
-                                      value = "")
+                                      value = ""),
+                            column(width = 6,
+                                   numericInput(inputId = "filter_missing_spheroids_low",
+                                                label = "Only include wells with a cell count ",
+                                                value = 0),
+                            ),
+                            column(width = 6,
+                                   numericInput(inputId = "filter_missing_spheroids_high",
+                                                label = "between these 2 numbers(optional)",
+                                                value = 1e10),
+                            ),
                         ),
                         box(
                             width = 4,
@@ -95,10 +105,6 @@ ui <- dashboardPage(
                             textInput(inputId = "fr_header", 
                                       label = "Copy and paste the name of the column for Far Red fluorescence.", 
                                       value = "X.Cell...Cellbody..MeanIntensity.CH5..AVG."),
-                            
-                            numericInput(inputId = "filter_missing_spheroids",
-                                         label = "Any well with a cell count below this number will not be counted. Used to filter missing spheroids",
-                                         value = 1000),
                             actionButton(inputId = "action", label = "Submit")
                         )
                     ),
@@ -194,10 +200,11 @@ server <- function(input, output) {
         #fms=filter missing spheroGraphSeriesNos. This excludes data from any well below a certain cell count threshold. <- WORKING
         #Normally this value sits at around 1000 but may need to be tweaked. 
         #You can double check that it's filtering accurately by comparing the excluded rows with pictures of the plate.
-        
+     
         if (input$brightfield == T){
             fms <- Cell_Stat%>%
-                filter(cell_count >= input$filter_missing_spheroids)
+                filter(cell_count >= input$filter_missing_spheroids_low)%>%
+                filter(cell_count <= input$filter_missing_spheroids_high)
         }
         else(fms <- Cell_Stat)
         
@@ -328,7 +335,7 @@ server <- function(input, output) {
                 geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill="grey")+
                 geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
-                style + labs(title = paste0(cleandate, " ",Plate, " Cell Count"), x=NULL, y = "Cell Count")
+                style + labs(title = paste0(cleandate, " ",Plate, " Mean Cell Count"), x=NULL, y = "Cell Count")
             output$cc_hist <- renderPlot({cc_graph})
             output$downloadcc1 <- downloadHandler(
                 filename = function() {
@@ -343,7 +350,7 @@ server <- function(input, output) {
                     geom_col(mapping = aes(x=factor(GraphSeriesNo), y = cc_mean_con), fill = "grey")+
                     geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = cc_mean_con - cc_stdev_con, ymax = cc_mean_con + cc_stdev_con), width = 0.2)+
                     scale_x_discrete(labels = sum_stat$Compound)+
-                    style + labs(title = paste0(cleandate, " ",Plate," ", con, " Normalized Cell Count"), x = NULL,y = paste0("Normalzed Cell Count"))
+                    style + labs(title = paste0(cleandate, " ",Plate," ", con, " Normalized Cell Count"), x = NULL,y = paste0("Normalized Cell Count"))
                 output$cc_hist_2 <- renderPlot({cc_con_graph})
                 output$downloadcc2 <- downloadHandler(
                     filename = function() {
@@ -602,7 +609,7 @@ server <- function(input, output) {
                     scale_x_discrete(labels = sum_stat$Compound)+
                     style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", fr_dye, " Mean Intensity"), 
                                  x = NULL,
-                                 y = paste0(fr_dye, " Normalzed Mean Intensity"))
+                                 y = paste0(fr_dye, " Normalized Mean Intensity"))
                 output$fr_hist_2 <- renderPlot({fr_con_graph})
                 output$downloadfr2 <- downloadHandler(
                     filename = function() {
