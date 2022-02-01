@@ -153,6 +153,8 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
     observeEvent(input$action_table, {
+        validate(need(input$cell_stat$datapath != "", "Need to upload file"))
+        showNotification("Submitted")
         #Read in the data file selected.
         Cell_Stat <- read.csv(input$cell_stat$datapath, header = T)
         #Display the table after hitting submit.
@@ -421,7 +423,7 @@ server <- function(input, output) {
                         paste0(date,"_", Plate,"_Blue_Control_Graph.svg")
                     },
                     content = function(file) {
-                        ggsave(file, plot = b_graph, width = 8, height = 5, device = svg)
+                        ggsave(file, plot = b_con_graph, width = 8, height = 5, device = svg)
                     }
                 )
                 if(bg != ""){
@@ -450,7 +452,7 @@ server <- function(input, output) {
                             paste0(date,"_", Plate,"_Blue_Line_Graph.svg")
                         },
                         content = function(file) {
-                            ggsave(file, plot = b_graph, width = 8, height = 5, device = svg)
+                            ggsave(file, plot = b_bg_graph, width = 8, height = 5, device = svg)
                         }
                     )
                     
