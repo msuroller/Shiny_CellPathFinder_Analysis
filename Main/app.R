@@ -73,10 +73,31 @@ ui <- dashboardPage(
                             textInput(inputId = "background", 
                                       label = "Type the name of the treatment you would like subtracted as background. (optional)", 
                                       value = ""),
+                            column(width = 6,
+                                   numericInput(inputId = "line_x_axis_low",
+                                                label = "X axis bound low (optional)",
+                                                value = -5),
+                            ),
+                            column(width = 6,
+                                   numericInput(inputId = "line_x_axis_high",
+                                                label = "X axis bound high (optional)",
+                                                value = -3),
+                            ),
                             textInput(inputId = "doses",
                                       label = "Type a comma separated list of your doses (optional). 
                                       Any treatments you don't want included on the line graph set as 0......i.e. 0, 1e-5, 0.0001, 0.0002",
                                       value = ""),
+
+                            column(width = 6,
+                                   numericInput(inputId = "filter_b_low",
+                                                label = "Only include wells with a MIP ",
+                                                value = 0),
+                            ),
+                            column(width = 6,
+                                   numericInput(inputId = "filter_b_high",
+                                                label = "between these 2 numbers(optional)",
+                                                value = 1e10),
+                            ),
                             column(width = 6,
                                    numericInput(inputId = "filter_missing_spheroids_low",
                                                 label = "Only include wells with a cell count ",
@@ -111,6 +132,18 @@ ui <- dashboardPage(
             ),
             tabItem(tabName = "graph_tab",
                 fluidPage(
+                    fluidRow(
+                      box(
+                          width = 6,
+                          radioButtons("graph_type", "Graph Type", c("Bar","Line","Scatter"), selected = "Bar" ,inline = T),
+                      ),
+                      box(
+                          width = 6,
+                          checkboxGroupInput("graph_options", "Graph Options", 
+                                             c("Mean","Standard Deviation","Standard Error of the Mean", "Grayscale"), 
+                                             selected = c("Mean", "Standard Deviation"), inline = T),
+                      )
+                    ),
                     fluidRow(
                         tabBox(
                             title = strong("Bar Graphs"), id = "tabset1",
@@ -311,8 +344,8 @@ server <- function(input, output) {
             filter(Dose != 0)
 
         #Need to ask for user input for these ones.
-        lowerxlim = -5
-        upperxlim = -3
+        lowerxlim = input$line_x_axis_low
+        upperxlim = input$line_x_axis_high
         lx = seq(.000001,.001, by = 0.00001) #List x
         
         #Graphing regular and control normalized bar graphs<- Working
@@ -460,66 +493,145 @@ server <- function(input, output) {
             }
         }
         
-        if(input$g == T){
-            g_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=g_mean), fill="green")+
+        if(input$graph_type == "Bar"){
+            if(input$g == T){
+                g_graph <- ggplot(data=sum_stat)+
+                        geom_col(mapping=aes(x=factor(GraphSeriesNo), y=g_mean), fill="green")+
+                        geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)+
+                        scale_x_discrete(labels = sum_stat$Compound)+
+                        style + labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"), x = NULL , y = paste0(g_dye," Mean Intensity"))
+                    
+                    # if(input$graph_type == "Line"){
+                    # else(
+                    #     geom_point(mapping=aes(x=factor(GraphSeriesNo), y=g_mean), fill="green")+
+                    #     #stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=g_mean, group = 1), geom = "line", size = 1, color = "green")+
+                    #     geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)+
+                    #     scale_x_discrete(labels = sum_stat$Compound)+
+                    #     style + labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"), x = NULL , y = paste0(g_dye," Mean Intensity")))
+                    # # }
+                output$g_hist <- renderPlot({g_graph})
+                output$downloadg1 <- downloadHandler(
+                    filename = function() {
+                        paste0(date,"_", Plate,"_Green_Graph.svg")
+                    },
+                    content = function(file) {
+                        ggsave(file, plot = g_graph, width = 8, height = 5, device = svg)
+                    }
+                )
+                if(con != ""){
+                    g_con_graph <- ggplot(data = sum_stat)+
+                        geom_col(mapping = aes(x=factor(GraphSeriesNo), y = g_mean_con), fill = "green")+
+                        geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
+                        scale_x_discrete(labels = sum_stat$Compound)+
+                        style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", g_dye, " Mean Intensity"), x = NULL, y = paste0(g_dye," Normalized Mean Intensity"))
+                    output$g_hist_2 <- renderPlot({g_con_graph})
+                    output$downloadg2 <- downloadHandler(
+                        filename = function() {
+                            paste0(date,"_", Plate,"_Green_control_Graph.svg")
+                        },
+                        content = function(file) {
+                            ggsave(file, plot = g_con_graph, width = 8, height = 5, device = svg)
+                        }
+                    )
+                    if(bg != ""){
+                        g_bg_graph <- ggplot(data = filter_sum_stat)+
+                            geom_point(filter_sum_stat,
+                                       mapping = aes(x = log10(Dose), y = g_mean_sub),
+                                       size = 3)+
+                            geom_errorbar(filter_sum_stat,
+                                          mapping = aes(x = log10(Dose), ymin = g_mean_sub - g_stdev_sub, ymax = g_mean_sub + g_stdev_sub),
+                                          width = 0.04)+
+                            geom_smooth(filter_sum_stat,
+                                        mapping = aes(x = log10(Dose), y = g_mean_sub),
+                                        se = F, color = "black")+
+                            scale_x_continuous(labels = scales::math_format())+
+                            coord_cartesian(xlim = c(lowerxlim,upperxlim),
+                                            ylim = c(0, 100),
+                                            expand = FALSE)+
+                            labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"),
+                                 x="Dose",
+                                 y = paste0(g_dye," Mean Intensity"))+
+                            theme_classic()+
+                            style2
+                        output$g_hist_3 <- renderPlot({g_bg_graph})
+                        output$downloadg3 <- downloadHandler(
+                            filename = function() {
+                                paste0(date,"_", Plate,"_Green_Graph.svg")
+                            },
+                            content = function(file) {
+                                ggsave(file, plot = g_bg_graph, width = 8, height = 5, device = svg)
+                            }
+                        )
+    
+                    }
+                }
+            }
+        }
+        
+        if(input$graph_type == "Line"){
+            if(input$g == T){
+                g_graph <- ggplot(data=sum_stat)+
+                geom_point(mapping=aes(x=factor(GraphSeriesNo), y=g_mean), fill="green")+
+                stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=g_mean, group = 1), geom = "line", size = 1, color = "green")+
                 geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)+
                 scale_x_discrete(labels = sum_stat$Compound)+
                 style + labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"), x = NULL , y = paste0(g_dye," Mean Intensity"))
-            output$g_hist <- renderPlot({g_graph})
-            output$downloadg1 <- downloadHandler(
-                filename = function() {
-                    paste0(date,"_", Plate,"_Green_Graph.svg")
-                },
-                content = function(file) {
-                    ggsave(file, plot = g_graph, width = 8, height = 5, device = svg)
-                }
-            )
-            if(con != ""){
-                g_con_graph <- ggplot(data = sum_stat)+
-                    geom_col(mapping = aes(x=factor(GraphSeriesNo), y = g_mean_con), fill = "green")+
-                    geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
-                    scale_x_discrete(labels = sum_stat$Compound)+
-                    style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", g_dye, " Mean Intensity"), x = NULL, y = paste0(g_dye," Normalized Mean Intensity"))
-                output$g_hist_2 <- renderPlot({g_con_graph})
-                output$downloadg2 <- downloadHandler(
+
+                output$g_hist <- renderPlot({g_graph})
+                output$downloadg1 <- downloadHandler(
                     filename = function() {
-                        paste0(date,"_", Plate,"_Green_control_Graph.svg")
+                        paste0(date,"_", Plate,"_Green_Graph.svg")
                     },
                     content = function(file) {
-                        ggsave(file, plot = g_con_graph, width = 8, height = 5, device = svg)
+                        ggsave(file, plot = g_graph, width = 8, height = 5, device = svg)
                     }
                 )
-                if(bg != ""){
-                    g_bg_graph <- ggplot(data = filter_sum_stat)+
-                        geom_point(filter_sum_stat,
-                                   mapping = aes(x = log10(Dose), y = g_mean_sub),
-                                   size = 3)+
-                        geom_errorbar(filter_sum_stat,
-                                      mapping = aes(x = log10(Dose), ymin = g_mean_sub - g_stdev_sub, ymax = g_mean_sub + g_stdev_sub),
-                                      width = 0.04)+
-                        geom_smooth(filter_sum_stat,
-                                    mapping = aes(x = log10(Dose), y = g_mean_sub),
-                                    se = F, color = "black")+
-                        scale_x_continuous(labels = scales::math_format())+
-                        coord_cartesian(xlim = c(lowerxlim,upperxlim),
-                                        ylim = c(0, 100),
-                                        expand = FALSE)+
-                        labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"),
-                             x="Dose",
-                             y = paste0(g_dye," Mean Intensity"))+
-                        theme_classic()+
-                        style2
-                    output$g_hist_3 <- renderPlot({g_bg_graph})
-                    output$downloadg3 <- downloadHandler(
+                if(con != ""){
+                    g_con_graph <- ggplot(data = sum_stat)+
+                        geom_col(mapping = aes(x=factor(GraphSeriesNo), y = g_mean_con), fill = "green")+
+                        geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
+                        scale_x_discrete(labels = sum_stat$Compound)+
+                        style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", g_dye, " Mean Intensity"), x = NULL, y = paste0(g_dye," Normalized Mean Intensity"))
+                    output$g_hist_2 <- renderPlot({g_con_graph})
+                    output$downloadg2 <- downloadHandler(
                         filename = function() {
-                            paste0(date,"_", Plate,"_Green_Graph.svg")
+                            paste0(date,"_", Plate,"_Green_control_Graph.svg")
                         },
                         content = function(file) {
-                            ggsave(file, plot = g_bg_graph, width = 8, height = 5, device = svg)
+                            ggsave(file, plot = g_con_graph, width = 8, height = 5, device = svg)
                         }
                     )
-
+                    if(bg != ""){
+                        g_bg_graph <- ggplot(data = filter_sum_stat)+
+                            geom_point(filter_sum_stat,
+                                       mapping = aes(x = log10(Dose), y = g_mean_sub),
+                                       size = 3)+
+                            geom_errorbar(filter_sum_stat,
+                                          mapping = aes(x = log10(Dose), ymin = g_mean_sub - g_stdev_sub, ymax = g_mean_sub + g_stdev_sub),
+                                          width = 0.04)+
+                            geom_smooth(filter_sum_stat,
+                                        mapping = aes(x = log10(Dose), y = g_mean_sub),
+                                        se = F, color = "black")+
+                            scale_x_continuous(labels = scales::math_format())+
+                            coord_cartesian(xlim = c(lowerxlim,upperxlim),
+                                            ylim = c(0, 100),
+                                            expand = FALSE)+
+                            labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"),
+                                 x="Dose",
+                                 y = paste0(g_dye," Mean Intensity"))+
+                            theme_classic()+
+                            style2
+                        output$g_hist_3 <- renderPlot({g_bg_graph})
+                        output$downloadg3 <- downloadHandler(
+                            filename = function() {
+                                paste0(date,"_", Plate,"_Green_Graph.svg")
+                            },
+                            content = function(file) {
+                                ggsave(file, plot = g_bg_graph, width = 8, height = 5, device = svg)
+                            }
+                        )
+                        
+                    }
                 }
             }
         }
