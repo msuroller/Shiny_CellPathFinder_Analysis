@@ -133,12 +133,11 @@ ui <- dashboardPage(
             tabItem(tabName = "graph_tab",
                 fluidPage(
                     fluidRow(
-                        #Need to add option for scatter plot still. Might want to add another submit button.
+                        #Want to add option for scatter plot still.
                       box(
                           width = 6,
-                          radioButtons("graph_type", "Graph Type", c("Bar","Line","Scatter"), selected = "Bar" ,inline = T)
+                          radioButtons("graph_type", "Graph Type", c("Bar","Line"), selected = "Bar" ,inline = T)
                       ),
-                      #Doesn't work yet.
                       box(
                           width = 6,
                             checkboxInput("stdev", "Standard Deviation", value = T),
@@ -1013,12 +1012,19 @@ server <- function(input, output) {
         upperxlim = input$line_x_axis_high
         lx = seq(.000001,.001, by = 0.00001) #List x
         
-        #Graphing regular and control normalized bar graphs<- Working
-        style <- theme(plot.title = element_text(face="bold", hjust = 0.5), 
-                       axis.title.y = element_text(face="bold"), 
-                       axis.text.x = element_text(size=9, face="bold", angle=30, hjust = 1, vjust = 1), 
+        #Graphing regular and control normalized bar graphs
+        #Style for the bar graphs
+        style <- theme(plot.title = element_text(face="bold", hjust = 0.5, size = 16), 
+                       axis.title.y = element_text(face="bold", size = 14), 
+                       axis.text.x = element_text(size=11, face="bold", angle=30, hjust = 1, vjust = 1, color = "black"),
+                       axis.line = element_line(size = 1.25), 
+                       axis.ticks = element_line(size = 1.25), 
+                       axis.ticks.length = unit(5, "pt"), 
+                       legend.justification=c(0,0), 
+                       legend.position=c(1,1),
                        plot.margin = margin(10,10,10,50, "pt"))
-        
+        style <- theme_classic() + style
+        #Style for the background sub graphs
         style2 <- theme(plot.title = element_text(face="bold", hjust = 0.5, size = 16), 
                         axis.title = element_text(face="bold", size = 14), 
                         axis.text = element_text(size = 14, face = "bold", color = "black"), 
@@ -1028,6 +1034,18 @@ server <- function(input, output) {
                         legend.justification=c(0,0), 
                         legend.position=c(1,1), 
                         plot.margin = margin(10,10,10,50, "pt"))
+        #Style for the line graphs
+        style3 <- theme(plot.title = element_text(face="bold", hjust = 0.5, size = 16), 
+                        axis.title = element_text(face="bold", size = 14), 
+                        axis.text = element_text(size = 11, face = "bold", color = "black"),
+                        axis.text.x = element_text(angle=30, hjust = 1, vjust = 1), 
+                        axis.line = element_line(size = 1.25), 
+                        axis.ticks = element_line(size = 1.25), 
+                        axis.ticks.length = unit(10, "pt"), 
+                        legend.justification=c(0,0), 
+                        legend.position=c(1,1), 
+                        plot.margin = margin(10,10,10,50, "pt"))
+        style3 <- theme_classic() + style3
         
         
         if(input$brightfield == T){
@@ -1046,7 +1064,7 @@ server <- function(input, output) {
                     {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)}+
                     {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_sem, ymax = cc_mean + cc_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
-                    style + labs(title = paste0(cleandate, " ",Plate, " Mean Cell Count"), x=NULL, y = "Cell Count")
+                    style3 + labs(title = paste0(cleandate, " ",Plate, " Mean Cell Count"), x=NULL, y = "Cell Count")
             }
             output$cc_hist <- renderPlot({cc_graph})
             output$downloadcc1 <- downloadHandler(
@@ -1073,7 +1091,7 @@ server <- function(input, output) {
                         {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = cc_mean_con - cc_stdev_con, ymax = cc_mean_con + cc_stdev_con), width = 0.2)}+
                         {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean_con - cc_sem_con, ymax = cc_mean_con + cc_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
-                        style + labs(title = paste0(cleandate, " ",Plate," ", con, " Normalized Cell Count"), x = NULL,y = paste0("Normalized Cell Count"))
+                        style3 + labs(title = paste0(cleandate, " ",Plate," ", con, " Normalized Cell Count"), x = NULL,y = paste0("Normalized Cell Count"))
                 }
                 output$cc_hist_2 <- renderPlot({cc_con_graph})
                 output$downloadcc2 <- downloadHandler(
@@ -1134,7 +1152,7 @@ server <- function(input, output) {
                     {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_stdev,  ymax = b_mean + b_stdev), width = 0.2)}+
                     {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_sem, ymax = b_mean + b_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
-                    style + labs(title = paste0(cleandate," ",Plate, " ", b_dye, " Mean Intensity"), x = NULL , y = paste0(b_dye," Mean Intensity"))
+                    style3 + labs(title = paste0(cleandate," ",Plate, " ", b_dye, " Mean Intensity"), x = NULL , y = paste0(b_dye," Mean Intensity"))
             }
             output$b_hist <- renderPlot({b_graph})
             output$downloadb1 <- downloadHandler(
@@ -1162,8 +1180,8 @@ server <- function(input, output) {
                         {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = b_mean_con - b_stdev_con, ymax = b_mean_con + b_stdev_con), width = 0.2)}+
                         {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean_con - b_sem_con, ymax = b_mean_con + b_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
-                        style + labs(title = paste0(cleandate, " ",Plate," ",con," Normalized ", b_dye, " Mean Intensity"), 
-                                     x = NULL, y = paste0(b_dye, " Normalized Mean Intensity"))
+                        style3 + labs(title = paste0(cleandate, " ",Plate," ",con," Normalized ", b_dye, " Mean Intensity"), 
+                                      x = NULL, y = paste0(b_dye, " Normalized Mean Intensity"))
                 }
                 output$b_hist_2 <- renderPlot({b_con_graph})
                 output$downloadb2 <- downloadHandler(
@@ -1224,7 +1242,7 @@ server <- function(input, output) {
                     {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)}+
                     {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_sem, ymax = g_mean + g_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
-                    style + labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"), x = NULL , y = paste0(g_dye," Mean Intensity"))
+                    style3 + labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"), x = NULL , y = paste0(g_dye," Mean Intensity"))
             }
             output$g_hist <- renderPlot({g_graph})
             output$downloadg1 <- downloadHandler(
@@ -1253,8 +1271,8 @@ server <- function(input, output) {
                         {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)}+
                         {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean_con - g_sem_con, ymax = g_mean_con + g_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
-                        style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", g_dye, " Mean Intensity"), 
-                                     x = NULL, y = paste0(g_dye," Normalized Mean Intensity"))
+                        style3 + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", g_dye, " Mean Intensity"), 
+                                      x = NULL, y = paste0(g_dye," Normalized Mean Intensity"))
                 }
                 output$g_hist_2 <- renderPlot({g_con_graph})
                 output$downloadg2 <- downloadHandler(
@@ -1315,7 +1333,7 @@ server <- function(input, output) {
                     {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_stdev,  ymax = r_mean + r_stdev), width = 0.2)}+
                     {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_sem, ymax = r_mean + r_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
-                    style + labs(title = paste0(cleandate," ",Plate, " ", r_dye, " Mean Intensity"), x = NULL , y = paste0(r_dye," Mean Intensity"))
+                    style3 + labs(title = paste0(cleandate," ",Plate, " ", r_dye, " Mean Intensity"), x = NULL , y = paste0(r_dye," Mean Intensity"))
             }
             output$r_hist <- renderPlot({r_graph})
             #Download button for the graph
@@ -1344,8 +1362,8 @@ server <- function(input, output) {
                         {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_stdev_con, ymax = r_mean_con + r_stdev_con), width = 0.2)}+
                         {if(input$sem == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_sem_con, ymax = r_mean_con + r_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
-                        style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", r_dye, " Mean Intensity"), 
-                                     x = NULL, y = paste0(r_dye, " Normalized Mean Intensity"))
+                        style3 + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", r_dye, " Mean Intensity"), 
+                                      x = NULL, y = paste0(r_dye, " Normalized Mean Intensity"))
                 }
                 output$r_hist_2 <- renderPlot({r_con_graph})
                 output$downloadr2 <- downloadHandler(
@@ -1406,7 +1424,7 @@ server <- function(input, output) {
                     {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_stdev,  ymax = fr_mean + fr_stdev), width = 0.2)}+
                     {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_sem, ymax = fr_mean + fr_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
-                    style + labs(title = paste0(cleandate," ",Plate, " ", fr_dye, " Mean Intensity"), x = NULL , y = paste0(fr_dye, " Mean Intensity"))
+                    style3 + labs(title = paste0(cleandate," ",Plate, " ", fr_dye, " Mean Intensity"), x = NULL , y = paste0(fr_dye, " Mean Intensity"))
             }
             output$fr_hist <- renderPlot({fr_graph})
             output$downloadfr1 <- downloadHandler(
@@ -1433,8 +1451,8 @@ server <- function(input, output) {
                         {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = fr_mean_con - fr_stdev_con, ymax = fr_mean_con + fr_stdev_con), width = 0.2)}+
                         {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean_con - fr_sem_con, ymax = fr_mean_con + fr_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
-                        style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", fr_dye, " Mean Intensity"), 
-                                     x = NULL, y = paste0(fr_dye, " Normalized Mean Intensity"))
+                        style3 + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", fr_dye, " Mean Intensity"), 
+                                      x = NULL, y = paste0(fr_dye, " Normalized Mean Intensity"))
                 }
                 output$fr_hist_2 <- renderPlot({fr_con_graph})
                 output$downloadfr2 <- downloadHandler(
