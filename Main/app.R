@@ -77,6 +77,9 @@ ui <- dashboardPage(
                                       label = "Type a comma separated list of your doses(optional). 
                                       Any treatments you don't want included on the line graph set as 0......i.e. 0, 1e-5, 0.0001, 0.0002",
                                       value = ""),
+                            textInput(inputId = "filter_compound",
+                                      label = "Type a comma separated list of the treatments you want displayed on the graph (optional, default set to all).
+                                      i.e. DMSO,1nM T3,5nM T3,10nM T3"),
 
                             column(width = 6,
                                    numericInput(inputId = "filter_b_low",
@@ -124,35 +127,34 @@ ui <- dashboardPage(
                 fluidPage(
                     column(width = 3,
                         #Want to add option for scatter plot still.
-                              box(width = 12, h4(strong("Graphing Options"), align = "center"),
-                                  radioButtons("graph_type", "Graph Type", c("Bar","Line"), selected = "Bar" ,inline = T),
-                                  radioButtons("error_bar_type", "Error Bar Type", c("Standard Deviation", "SEM"), selected = "Standard Deviation", inline = T),
-                                  radioButtons("color_type", "Colors", c("Bright", "Black & White"), selected = "Bright", inline = T),
-                                  column(width = 6,
-                                         numericInput(inputId = "y_low",
-                                                      label = "Lower Y axis",
-                                                      value = -1e6
-                                                      ),
-                                  ),
-                                  column(width = 6,
-                                         numericInput(inputId = "y_high",
-                                                      label = "Upper Y axis",
-                                                      value = 1e6
-                                                      ),
-                                  ),
-                                  h4(strong("For Log Plots"), align = "center"),
-                                  column(width = 6,
-                                         numericInput(inputId = "line_x_axis_low",
-                                                      label = "Lower log(X) axis",
-                                                      value = -5),
-                                  ),
-                                  column(width = 6,
-                                         numericInput(inputId = "line_x_axis_high",
-                                                      label = "Upper log(X) axis",
-                                                      value = -3),
-                                  ),
-                                  h5(actionButton(inputId = "action2", label = "Submit"), align = "right")
-                              )
+                          box(width = 12, h4(strong("Graphing Options"), align = "center"),
+                              radioButtons("graph_type", "Graph Type", c("Bar","Line"), selected = "Bar" ,inline = T),
+                              radioButtons("error_bar_type", "Error Bar Type", c("Standard Deviation", "SEM"), selected = "Standard Deviation", inline = T),
+                              column(width = 6,
+                                     numericInput(inputId = "y_low",
+                                                  label = "Lower Y axis",
+                                                  value = -1e6
+                                                  ),
+                              ),
+                              column(width = 6,
+                                     numericInput(inputId = "y_high",
+                                                  label = "Upper Y axis",
+                                                  value = 1e6
+                                                  ),
+                              ),
+                              h4(strong("For Log Plots"), align = "center"),
+                              column(width = 6,
+                                     numericInput(inputId = "line_x_axis_low",
+                                                  label = "Lower log(X) axis",
+                                                  value = -5),
+                              ),
+                              column(width = 6,
+                                     numericInput(inputId = "line_x_axis_high",
+                                                  label = "Upper log(X) axis",
+                                                  value = -3),
+                              ),
+                              h5(actionButton(inputId = "action2", label = "Submit"), align = "right")
+                          )
                     ),
                     column(width = 9,
                            tabBox(
@@ -363,6 +365,13 @@ server <- function(input, output) {
           sum_stat$Dose = doses
         }
         
+        #Filter by selected compounds
+        if(isolate(input$filter_compound != "")){
+            compounds <- unlist(strsplit(c(isolate(input$filter_compound)), ","))
+            sum_stat <- sum_stat%>%
+                filter(Compound %in% compounds)
+        }
+        
         filter_sum_stat <- sum_stat%>%
             filter(Dose != 0)
 
@@ -412,7 +421,7 @@ server <- function(input, output) {
         if(input$brightfield == T){
             if(input$graph_type == "Bar"){
                 cc_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill="grey")+
+                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill = "grey")+
                 {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)}+
                 {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_sem, ymax = cc_mean + cc_sem), width = 0.2)}+
                 scale_x_discrete(labels = sum_stat$Compound)+
@@ -1052,10 +1061,19 @@ server <- function(input, output) {
             sum_stat$Dose = doses
         }
         
+        #Filter by selected compounds
+        if(isolate(input$filter_compound != "")){
+            compounds <- unlist(strsplit(c(isolate(input$filter_compound)), ","))
+            sum_stat <- sum_stat%>%
+                filter(Compound %in% compounds)
+        }
+        
         filter_sum_stat <- sum_stat%>%
             filter(Dose != 0)
         
         #Need to ask for user input for these ones.
+        lowerylim = input$y_low
+        upperylim = input$y_high
         lowerxlim = input$line_x_axis_low
         upperxlim = input$line_x_axis_high
         lx = seq(.000001,.001, by = 0.00001) #List x
@@ -1099,19 +1117,23 @@ server <- function(input, output) {
         if(input$brightfield == T){
             if(input$graph_type == "Bar"){
                 cc_graph <- ggplot(data=sum_stat)+
-                    geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill="grey")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_sem, ymax = cc_mean + cc_sem), width = 0.2)}+
+                    geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill = "grey")+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_sem, ymax = cc_mean + cc_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style + labs(title = paste0(cleandate, " ",Plate, " Mean Cell Count"), x=NULL, y = "Cell Count")
             }
             if(input$graph_type == "Line"){
                 cc_graph <- ggplot(data=sum_stat)+
                     geom_point(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill="grey")+
                     stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean, group = 1), fun = "mean", geom = "line", size = 1, color = "grey")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_sem, ymax = cc_mean + cc_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_sem, ymax = cc_mean + cc_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style3 + labs(title = paste0(cleandate, " ",Plate, " Mean Cell Count"), x=NULL, y = "Cell Count")
             }
             output$cc_hist <- renderPlot({cc_graph})
@@ -1127,18 +1149,22 @@ server <- function(input, output) {
                 if(input$graph_type == "Bar"){
                     cc_con_graph <- ggplot(data = sum_stat)+
                         geom_col(mapping = aes(x=factor(GraphSeriesNo), y = cc_mean_con), fill = "grey")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = cc_mean_con - cc_stdev_con, ymax = cc_mean_con + cc_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean_con - cc_sem_con, ymax = cc_mean_con + cc_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = cc_mean_con - cc_stdev_con, ymax = cc_mean_con + cc_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean_con - cc_sem_con, ymax = cc_mean_con + cc_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style + labs(title = paste0(cleandate, " ",Plate," ", con, " Normalized Cell Count"), x = NULL,y = paste0("Normalized Cell Count"))
                 }
                 if(input$graph_type == "Line"){
                     cc_con_graph <- ggplot(data = sum_stat)+
                         geom_point(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean_con), fill="grey")+
                         stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean_con, group = 1), fun = "mean", geom = "line", size = 1, color = "grey")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = cc_mean_con - cc_stdev_con, ymax = cc_mean_con + cc_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean_con - cc_sem_con, ymax = cc_mean_con + cc_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = cc_mean_con - cc_stdev_con, ymax = cc_mean_con + cc_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean_con - cc_sem_con, ymax = cc_mean_con + cc_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style3 + labs(title = paste0(cleandate, " ",Plate," ", con, " Normalized Cell Count"), x = NULL,y = paste0("Normalized Cell Count"))
                 }
                 output$cc_hist_2 <- renderPlot({cc_con_graph})
@@ -1166,7 +1192,7 @@ server <- function(input, output) {
                                         ylim = c(0, 100),
                                         expand = FALSE)+
                         labs(title = paste0(cleandate," ",Plate," Cell Count"),
-                             x="Mefenamanic Acid Dose",
+                             x="Dose",
                              y = "Cell Count Mean")+
                         theme_classic()+
                         style2
@@ -1188,18 +1214,22 @@ server <- function(input, output) {
             if(input$graph_type == "Bar"){
                 b_graph <- ggplot(data=sum_stat)+
                     geom_col(mapping=aes(x=factor(GraphSeriesNo), y=b_mean), fill="blue")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_stdev,  ymax = b_mean + b_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_sem, ymax = b_mean + b_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_stdev,  ymax = b_mean + b_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_sem, ymax = b_mean + b_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style + labs(title = paste0(cleandate," ",Plate, " ", b_dye, " Mean Intensity"), x = NULL , y = paste0(b_dye," Mean Intensity"))
             }
             if(input$graph_type == "Line"){
                 b_graph <- ggplot(data=sum_stat)+
                     geom_point(mapping=aes(x=factor(GraphSeriesNo), y=b_mean), fill="blue")+
                     stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=b_mean, group = 1), fun = "mean", geom = "line", size = 1, color = "blue")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_stdev,  ymax = b_mean + b_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_sem, ymax = b_mean + b_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_stdev,  ymax = b_mean + b_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean - b_sem, ymax = b_mean + b_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style3 + labs(title = paste0(cleandate," ",Plate, " ", b_dye, " Mean Intensity"), x = NULL , y = paste0(b_dye," Mean Intensity"))
             }
             output$b_hist <- renderPlot({b_graph})
@@ -1215,9 +1245,11 @@ server <- function(input, output) {
                 if(input$graph_type == "Bar"){
                     b_con_graph <- ggplot(data = sum_stat)+
                         geom_col(mapping = aes(x=factor(GraphSeriesNo), y = b_mean_con), fill = "blue")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = b_mean_con - b_stdev_con, ymax = b_mean_con + b_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean_con - b_sem_con, ymax = b_mean_con + b_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = b_mean_con - b_stdev_con, ymax = b_mean_con + b_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean_con - b_sem_con, ymax = b_mean_con + b_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style + labs(title = paste0(cleandate, " ",Plate," ",con," Normalized ", b_dye, " Mean Intensity"), 
                                      x = NULL, y = paste0(b_dye, " Normalized Mean Intensity"))
                 }
@@ -1225,9 +1257,11 @@ server <- function(input, output) {
                     b_con_graph <- ggplot(data = sum_stat)+
                         geom_point(mapping=aes(x=factor(GraphSeriesNo), y=b_mean_con), fill="blue")+
                         stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=b_mean_con, group = 1), fun = "mean", geom = "line", size = 1, color = "blue")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = b_mean_con - b_stdev_con, ymax = b_mean_con + b_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean_con - b_sem_con, ymax = b_mean_con + b_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = b_mean_con - b_stdev_con, ymax = b_mean_con + b_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = b_mean_con - b_sem_con, ymax = b_mean_con + b_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style3 + labs(title = paste0(cleandate, " ",Plate," ",con," Normalized ", b_dye, " Mean Intensity"), 
                                       x = NULL, y = paste0(b_dye, " Normalized Mean Intensity"))
                 }
@@ -1278,18 +1312,22 @@ server <- function(input, output) {
             if(input$graph_type == "Bar"){
                 g_graph <- ggplot(data=sum_stat)+
                     geom_col(mapping=aes(x=factor(GraphSeriesNo), y=g_mean), fill="green")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_sem, ymax = g_mean + g_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_sem, ymax = g_mean + g_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style + labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"), x = NULL , y = paste0(g_dye," Mean Intensity"))
             }
             if(input$graph_type == "Line"){
                 g_graph <- ggplot(data = sum_stat)+
                     geom_point(mapping=aes(x=factor(GraphSeriesNo), y=g_mean), fill="green")+
                     stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=g_mean, group = 1), fun = "mean", geom = "line", size = 1, color = "green")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_sem, ymax = g_mean + g_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_stdev,  ymax = g_mean + g_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean - g_sem, ymax = g_mean + g_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style3 + labs(title = paste0(cleandate," ",Plate, " ", g_dye, " Mean Intensity"), x = NULL , y = paste0(g_dye," Mean Intensity"))
             }
             output$g_hist <- renderPlot({g_graph})
@@ -1306,9 +1344,11 @@ server <- function(input, output) {
                     g_con_graph <- ggplot(data = sum_stat)+
                         geom_col(mapping = aes(x=factor(GraphSeriesNo), y = g_mean_con), fill = "green")+
                         geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean_con - g_sem_con, ymax = g_mean_con + g_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean_con - g_sem_con, ymax = g_mean_con + g_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", g_dye, " Mean Intensity"), 
                                      x = NULL, y = paste0(g_dye," Normalized Mean Intensity"))
                 }
@@ -1316,9 +1356,11 @@ server <- function(input, output) {
                     g_con_graph <- ggplot(data = sum_stat)+
                         geom_point(mapping=aes(x=factor(GraphSeriesNo), y=g_mean_con), fill="green")+
                         stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=g_mean_con, group = 1), fun = "mean", geom = "line", size = 1, color = "green")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean_con - g_sem_con, ymax = g_mean_con + g_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean_con - g_sem_con, ymax = g_mean_con + g_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style3 + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", g_dye, " Mean Intensity"), 
                                       x = NULL, y = paste0(g_dye," Normalized Mean Intensity"))
                 }
@@ -1369,18 +1411,22 @@ server <- function(input, output) {
             if(input$graph_type == "Bar"){
                 r_graph <- ggplot(data=sum_stat)+
                     geom_col(mapping=aes(x=factor(GraphSeriesNo), y=r_mean), fill="red")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_stdev,  ymax = r_mean + r_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_sem, ymax = r_mean + r_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_stdev,  ymax = r_mean + r_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_sem, ymax = r_mean + r_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style + labs(title = paste0(cleandate," ",Plate, " ", r_dye, " Mean Intensity"), x = NULL , y = paste0(r_dye," Mean Intensity"))
             }
             if(input$graph_type == "Line"){
                 r_graph <- ggplot(data=sum_stat)+
                     geom_point(mapping=aes(x=factor(GraphSeriesNo), y=r_mean), fill="red")+
                     stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=r_mean, group = 1), fun = "mean", geom = "line", size = 1, color = "red")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_stdev,  ymax = r_mean + r_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_sem, ymax = r_mean + r_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_stdev,  ymax = r_mean + r_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = r_mean - r_sem, ymax = r_mean + r_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style3 + labs(title = paste0(cleandate," ",Plate, " ", r_dye, " Mean Intensity"), x = NULL , y = paste0(r_dye," Mean Intensity"))
             }
             output$r_hist <- renderPlot({r_graph})
@@ -1397,9 +1443,11 @@ server <- function(input, output) {
                 if(input$graph_type == "Bar"){
                     r_con_graph <- ggplot(data = sum_stat)+
                         geom_col(mapping = aes(x=factor(GraphSeriesNo), y = r_mean_con), fill = "red")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_stdev_con, ymax = r_mean_con + r_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_sem_con, ymax = r_mean_con + r_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_stdev_con, ymax = r_mean_con + r_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_sem_con, ymax = r_mean_con + r_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", r_dye, " Mean Intensity"), 
                                      x = NULL, y = paste0(r_dye, " Normalized Mean Intensity"))
                 }
@@ -1407,9 +1455,11 @@ server <- function(input, output) {
                     r_con_graph <- ggplot(data = sum_stat)+
                         geom_point(mapping=aes(x=factor(GraphSeriesNo), y=r_mean_con), fill="red")+
                         stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=r_mean_con, group = 1), fun = "mean", geom = "line", size = 1, color = "red")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_stdev_con, ymax = r_mean_con + r_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_sem_con, ymax = r_mean_con + r_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_stdev_con, ymax = r_mean_con + r_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = r_mean_con - r_sem_con, ymax = r_mean_con + r_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style3 + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", r_dye, " Mean Intensity"), 
                                       x = NULL, y = paste0(r_dye, " Normalized Mean Intensity"))
                 }
@@ -1460,18 +1510,22 @@ server <- function(input, output) {
             if(input$graph_type == "Bar"){
                 fr_graph <- ggplot(data=sum_stat)+
                     geom_col(mapping=aes(x=factor(GraphSeriesNo), y=fr_mean), fill="purple")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_stdev,  ymax = fr_mean + fr_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_sem, ymax = fr_mean + fr_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_stdev,  ymax = fr_mean + fr_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_sem, ymax = fr_mean + fr_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style + labs(title = paste0(cleandate," ",Plate, " ", fr_dye, " Mean Intensity"), x = NULL , y = paste0(fr_dye, " Mean Intensity"))
             }
             if(input$graph_type == "Line"){
                 fr_graph <- ggplot(data=sum_stat)+
                     geom_point(mapping=aes(x=factor(GraphSeriesNo), y=fr_mean), fill="purple")+
                     stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=fr_mean, group = 1), fun = "mean", geom = "line", size = 1, color = "purple")+
-                    {if(input$stdev == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_stdev,  ymax = fr_mean + fr_stdev), width = 0.2)}+
-                    {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_sem, ymax = fr_mean + fr_sem), width = 0.2)}+
+                    {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_stdev,  ymax = fr_mean + fr_stdev), width = 0.2)}+
+                    {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean - fr_sem, ymax = fr_mean + fr_sem), width = 0.2)}+
                     scale_x_discrete(labels = sum_stat$Compound)+
+                    {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                    {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                     style3 + labs(title = paste0(cleandate," ",Plate, " ", fr_dye, " Mean Intensity"), x = NULL , y = paste0(fr_dye, " Mean Intensity"))
             }
             output$fr_hist <- renderPlot({fr_graph})
@@ -1487,8 +1541,11 @@ server <- function(input, output) {
                 if(input$graph_type == "Bar"){
                     fr_con_graph <- ggplot(data = sum_stat)+
                         geom_col(mapping = aes(x=factor(GraphSeriesNo), y = fr_mean_con), fill = "purple")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = fr_mean_con - fr_stdev_con, ymax = fr_mean_con + fr_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean_con - fr_sem_con, ymax = fr_mean_con + fr_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = fr_mean_con - fr_stdev_con, ymax = fr_mean_con + fr_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean_con - fr_sem_con, ymax = fr_mean_con + fr_sem_con), width = 0.2)}+
+                        scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", fr_dye, " Mean Intensity"), 
                                      x = NULL, y = paste0(fr_dye, " Normalized Mean Intensity"))
                 }
@@ -1496,9 +1553,11 @@ server <- function(input, output) {
                     fr_con_graph <- ggplot(data = sum_stat)+
                         geom_point(mapping=aes(x=factor(GraphSeriesNo), y=fr_mean_con), fill="purple")+
                         stat_summary(mapping=aes(x=factor(GraphSeriesNo), y=fr_mean_con, group = 1), fun = "mean", geom = "line", size = 1, color = "purple")+
-                        {if(input$stdev == T)geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = fr_mean_con - fr_stdev_con, ymax = fr_mean_con + fr_stdev_con), width = 0.2)}+
-                        {if(input$sem == T)geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean_con - fr_sem_con, ymax = fr_mean_con + fr_sem_con), width = 0.2)}+
+                        {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = fr_mean_con - fr_stdev_con, ymax = fr_mean_con + fr_stdev_con), width = 0.2)}+
+                        {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = fr_mean_con - fr_sem_con, ymax = fr_mean_con + fr_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
+                        {if(input$y_low != -1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
+                        {if(input$y_high != 1e6)coord_cartesian(ylim = c(lowerylim, upperylim))}+
                         style3 + labs(title = paste0(cleandate, " ",Plate," ", con," Normalized ", fr_dye, " Mean Intensity"), 
                                       x = NULL, y = paste0(fr_dye, " Normalized Mean Intensity"))
                 }
@@ -1508,7 +1567,7 @@ server <- function(input, output) {
                         paste0(date,"_", Plate,"_Far_Red_Control_Graph.svg")
                     },
                     content = function(file) {
-                        ggsave(file, plot = fr_graph, width = 8, height = 5, device = svg)
+                        ggsave(file, plot = fr_con_graph, width = 8, height = 5, device = svg)
                     }
                 )
                 if(bg != ""){
@@ -1537,7 +1596,7 @@ server <- function(input, output) {
                             paste0(date,"_", Plate,"_Far_Red_Graph.svg")
                         },
                         content = function(file) {
-                            ggsave(file, plot = fr_graph, width = 8, height = 5, device = svg)
+                            ggsave(file, plot = fr_bg_graph, width = 8, height = 5, device = svg)
                         }
                     )
                     
