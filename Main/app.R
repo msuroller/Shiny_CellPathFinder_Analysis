@@ -647,7 +647,6 @@ server <- function(input, output) {
                 if(input$graph_type == "Bar"){
                     g_con_graph <- ggplot(data = sum_stat)+
                         geom_col(mapping = aes(x=factor(GraphSeriesNo), y = g_mean_con), fill = "green")+
-                        geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
                         {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)}+
                         {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean_con - g_sem_con, ymax = g_mean_con + g_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
