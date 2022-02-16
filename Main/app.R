@@ -48,19 +48,27 @@ ui <- dashboardPage(
                                           value = T)
                           ),
                           column(width = 7,
-                                 selectInput(inputId = "b_dye",
-                                           label = "Blue channel dye (optional)",
-                                           choices = c("", "Hoechst")),
-                                 selectInput(inputId = "g_dye",
-                                           label = "Green channel dye (optional)",
-                                           choices = c("","DiO", "Rhodamine123")),
-                                 selectInput(inputId = "r_dye",
-                                           label = "Red channel dye (optional)",
-                                           choices = c("","MitoTacker Orange", "MitoTracker Red")),
-                                 selectInput(inputId = "fr_dye",
-                                           label = "Far Red channel dye (optional)",
-                                           choices = c("","CyP-AP BioTracker", "CellRox"))
+                                 selectizeInput(inputId = "b_dye", 
+                                                "Blue channel dye (optional)", 
+                                                choices = c("","Hoechst"),
+                                                options = list(create = TRUE)
+                                 ),
+                                 selectizeInput(inputId = "g_dye", 
+                                                "Green channel dye (optional)", 
+                                                choices = c("","Annexin V-FITC","DiO", "Bodipy","CalceinAM","Caspase-3","CellRox Green","Codex","Lectin","Acridine Orange","Rhodamine123"),
+                                                options = list(create = TRUE)
+                                 ),
+                                 selectizeInput(inputId = "r_dye", 
+                                                "Red channel dye (optional)", 
+                                                choices = c("","CellRox Orange","CellTracker Red","Codex","MitoTacker Orange", "MitoTracker Red","Nile Red","Propidium Iodide"),
+                                                options = list(create = TRUE)
+                                 ),
+                                 selectizeInput(inputId = "fr_dye", 
+                                                "Far Red channel dye (optional)", 
+                                                choices = c("","CyP-AP BioTracker", "CellRox Deep Red"),
+                                                options = list(create = TRUE)
                                  )
+                          )
                         ),
                         box(
                             width = 4,
@@ -130,6 +138,7 @@ ui <- dashboardPage(
                           box(width = 12, h4(strong("Graphing Options"), align = "center"),
                               radioButtons("graph_type", "Graph Type", c("Bar","Line"), selected = "Bar" ,inline = T),
                               radioButtons("error_bar_type", "Error Bar Type", c("Standard Deviation", "SEM"), selected = "Standard Deviation", inline = T),
+                              radioButtons("color_type", "Color", c("Bright","Black & White"), selected = "Bright" ,inline = T),
                               column(width = 6,
                                      numericInput(inputId = "y_low",
                                                   label = "Lower Y axis",
@@ -421,7 +430,7 @@ server <- function(input, output) {
         if(input$brightfield == T){
             if(input$graph_type == "Bar"){
                 cc_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill = "grey")+
+                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill = ifelse(input$color_type == "Bright", "grey", "black"))+
                 {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)}+
                 {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_sem, ymax = cc_mean + cc_sem), width = 0.2)}+
                 scale_x_discrete(labels = sum_stat$Compound)+
@@ -908,7 +917,7 @@ server <- function(input, output) {
         }
         
     })
-    observeEvent(input$action2,{
+    observeEvent(input$action,{
         Cell_Stat <- read.csv(input$cell_stat$datapath, header = T)
         con <- isolate(input$con)
         bg <- isolate(input$background)
@@ -1342,7 +1351,6 @@ server <- function(input, output) {
                 if(input$graph_type == "Bar"){
                     g_con_graph <- ggplot(data = sum_stat)+
                         geom_col(mapping = aes(x=factor(GraphSeriesNo), y = g_mean_con), fill = "green")+
-                        geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)+
                         {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x=factor(GraphSeriesNo), ymin = g_mean_con - g_stdev_con, ymax = g_mean_con + g_stdev_con), width = 0.2)}+
                         {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = g_mean_con - g_sem_con, ymax = g_mean_con + g_sem_con), width = 0.2)}+
                         scale_x_discrete(labels = sum_stat$Compound)+
