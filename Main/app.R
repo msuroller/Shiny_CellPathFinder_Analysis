@@ -138,7 +138,7 @@ ui <- dashboardPage(
                           box(width = 12, h4(strong("Graphing Options"), align = "center"),
                               radioButtons("graph_type", "Graph Type", c("Bar","Line"), selected = "Bar" ,inline = T),
                               radioButtons("error_bar_type", "Error Bar Type", c("Standard Deviation", "SEM"), selected = "Standard Deviation", inline = T),
-                              radioButtons("color_type", "Color", c("Bright","Black & White"), selected = "Bright" ,inline = T),
+                              #radioButtons("color_type", "Color", c("Bright","Black & White"), selected = "Bright" ,inline = T),
                               column(width = 6,
                                      numericInput(inputId = "y_low",
                                                   label = "Lower Y axis",
@@ -430,7 +430,7 @@ server <- function(input, output) {
         if(input$brightfield == T){
             if(input$graph_type == "Bar"){
                 cc_graph <- ggplot(data=sum_stat)+
-                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill = ifelse(input$color_type == "Bright", "grey", "black"))+
+                geom_col(mapping=aes(x=factor(GraphSeriesNo), y=cc_mean), fill = "grey")+
                 {if(input$error_bar_type == "Standard Deviation")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_stdev,  ymax = cc_mean + cc_stdev), width = 0.2)}+
                 {if(input$error_bar_type == "SEM")geom_errorbar(aes(x = factor(GraphSeriesNo), ymin = cc_mean - cc_sem, ymax = cc_mean + cc_sem), width = 0.2)}+
                 scale_x_discrete(labels = sum_stat$Compound)+
@@ -917,7 +917,7 @@ server <- function(input, output) {
         }
         
     })
-    observeEvent(input$action,{
+    observeEvent(input$action2,{
         Cell_Stat <- read.csv(input$cell_stat$datapath, header = T)
         con <- isolate(input$con)
         bg <- isolate(input$background)
