@@ -5,7 +5,16 @@ library(DT)
 options(shiny.maxRequestSize = 100*1024^2)
 
 ui <- dashboardPage(
-    dashboardHeader(title = "GraphMaster 9000"),
+    dashboardHeader(title = "GraphMaster 9000",
+                        dropdownMenu(
+                        type = "notifications", 
+                        icon = icon("question-circle"),
+                        badgeStatus = NULL,
+                        headerText = "Please send any questions, comments, or concerns to:",
+                        notificationItem("terrianl@msu.edu", icon = icon("envelope"),
+                                         href = "mailto:terrianl@msu.edu")
+                        )
+                   ),
     dashboardSidebar(
         sidebarMenu(
             menuItem("Home", tabName = "input_tab", icon = icon("home")),
