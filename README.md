@@ -8,5 +8,3 @@ To Do List:
   - Figure out how to change starting values like in Computational Physics
   - Figure out how to compute significance and display it on the graphs
   - Add a "download all" button for graphs
-  
-  -Testing connections
