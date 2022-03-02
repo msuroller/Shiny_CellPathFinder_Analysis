@@ -7,6 +7,4 @@ To Do List:
   - Add error catches so it tells the user what's wrong instead of just closing the program.
   - Figure out how to change starting values like in Computational Physics
   - Figure out how to compute significance and display it on the graphs
-  - Add user input for lower and upper x limit on line graph
   - Add a "download all" button for graphs
-  - Add filter by min/max intensity for all channels (deals with debris lighting up)
