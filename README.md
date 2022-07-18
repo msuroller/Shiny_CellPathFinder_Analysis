@@ -1,5 +1,8 @@
 # GraphMaster9000
+<<<<<<< HEAD
 ***https://terrianl.shinyapps.io/GraphMaster9000/***
+=======
+>>>>>>> e35e41945bddffd419ff25678eb3d7c3e4e67586
 Shiny App for cellpathfinder cell_stats file input, outputs graphs, control-normalized graphs, and background subtracted/control-normalized graphs.
 
 
